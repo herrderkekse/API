@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Welcome to [Salon Name] - Your one-stop destination for a fresh, clean, and rejuvenating wash experience.">
+    <title>[Salon Name] - Wash & Relax</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+
+        header {
+            background-color: #2C3E50;
+            color: white;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+
+        header p {
+            font-size: 1.2em;
+            margin-top: 10px;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .services,
+        .about,
+        .contact {
+            max-width: 900px;
+            margin: 20px 0;
+        }
+
+        .section-title {
+            font-size: 2em;
+            color: #34495E;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .service-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            justify-items: center;
+        }
+
+        .service-card {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .cta-button {
+            background-color: #E74C3C;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1.2em;
+            margin-top: 20px;
+            display: block;
+            text-align: center;
+        }
+
+        footer {
+            background-color: #34495E;
+            color: white;
+            text-align: center;
+            padding: 20px 0;
+            font-size: 1em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>[Salon Name]</h1>
+        <p>Your Fresh, Clean, and Rejuvenating Wash Experience</p>
+    </header>
+
+    <div class="main-content">
+
+        <section class="services">
+            <h2 class="section-title">Our Services</h2>
+            <div class="service-list">
+                <div class="service-card">
+                    <h3>Standard Wash</h3>
+                    <p>Get a quick and refreshing wash for your vehicle or laundry.</p>
+                </div>
+                <div class="service-card">
+                    <h3>Premium Wash</h3>
+                    <p>Includes detailed cleaning with high-quality products for the perfect shine.</p>
+                </div>
+                <div class="service-card">
+                    <h3>Steam Cleaning</h3>
+                    <p>Steam cleaning for deep sanitization and refreshing results.</p>
+                </div>
+                <div class="service-card">
+                    <h3>Eco-Friendly Wash</h3>
+                    <p>A sustainable option that uses eco-friendly products and water-saving techniques.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="about">
+            <h2 class="section-title">About Us</h2>
+            <p>At [Salon Name], we are committed to providing top-notch washing services with a focus on quality,
+                customer satisfaction, and the environment. Whether you're looking for a quick refresh or a detailed
+                clean, we have the perfect option for you. Come experience the best wash salon in town!</p>
+        </section>
+
+        <section class="contact">
+            <h2 class="section-title">Contact Us</h2>
+            <p>We'd love to hear from you! Feel free to get in touch with us for bookings, questions, or more
+                information.</p>
+            <a href="contact.html" class="cta-button">Contact Us</a>
+        </section>
+
+    </div>
+
+    <footer>
+        <p>&copy; 2025 [Salon Name]. All Rights Reserved.</p>
+        <p>Follow us on social media for the latest updates!</p>
+    </footer>
+
+</body>
+
+</html>

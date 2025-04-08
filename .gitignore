@@ -1,3 +1,13 @@
+# config files
+config.py
+secrets.py
+config.h
+secrets.h
+
+# vscode
+.vscode
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
