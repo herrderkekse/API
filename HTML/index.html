@@ -4,10 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="Welcome to [Salon Name] - Your one-stop destination for a fresh, clean, and rejuvenating wash experience.">
-    <title>[Salon Name] - Wash & Relax</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Waschsalon Login</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,139 +13,326 @@
             background-color: #f9f9f9;
         }
 
-        header {
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .login-container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
             background-color: #2C3E50;
             color: white;
-            text-align: center;
-            padding: 20px 0;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
         }
 
-        header h1 {
-            margin: 0;
-            font-size: 2.5em;
+        button:hover {
+            background-color: #34495E;
         }
 
-        header p {
-            font-size: 1.2em;
+        .error-message {
+            color: #E74C3C;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .success-message {
+            color: #27AE60;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .dashboard {
+            display: none;
+        }
+
+        .device-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .device-card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .device-status {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .device-timer {
+            margin-top: 5px;
+            color: #666;
+        }
+
+        .logout-btn {
+            background-color: #E74C3C;
+            margin-top: 20px;
+        }
+
+        .user-management {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-management h3 {
+            margin-top: 0;
+        }
+
+        .success-message {
+            display: none;
+            color: green;
             margin-top: 10px;
         }
 
-        .main-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 40px 20px;
-        }
-
-        .services,
-        .about,
-        .contact {
-            max-width: 900px;
-            margin: 20px 0;
-        }
-
-        .section-title {
-            font-size: 2em;
-            color: #34495E;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .service-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-            justify-items: center;
-        }
-
-        .service-card {
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            text-align: center;
-            transition: transform 0.3s;
-        }
-
-        .service-card:hover {
-            transform: translateY(-10px);
-        }
-
-        .cta-button {
-            background-color: #E74C3C;
-            color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 1.2em;
-            margin-top: 20px;
-            display: block;
-            text-align: center;
-        }
-
-        footer {
-            background-color: #34495E;
-            color: white;
-            text-align: center;
-            padding: 20px 0;
-            font-size: 1em;
+        .error-message {
+            display: none;
+            color: red;
+            margin-top: 10px;
         }
     </style>
 </head>
 
 <body>
-
-    <header>
-        <h1>[Salon Name]</h1>
-        <p>Your Fresh, Clean, and Rejuvenating Wash Experience</p>
-    </header>
-
-    <div class="main-content">
-
-        <section class="services">
-            <h2 class="section-title">Our Services</h2>
-            <div class="service-list">
-                <div class="service-card">
-                    <h3>Standard Wash</h3>
-                    <p>Get a quick and refreshing wash for your vehicle or laundry.</p>
-                </div>
-                <div class="service-card">
-                    <h3>Premium Wash</h3>
-                    <p>Includes detailed cleaning with high-quality products for the perfect shine.</p>
-                </div>
-                <div class="service-card">
-                    <h3>Steam Cleaning</h3>
-                    <p>Steam cleaning for deep sanitization and refreshing results.</p>
-                </div>
-                <div class="service-card">
-                    <h3>Eco-Friendly Wash</h3>
-                    <p>A sustainable option that uses eco-friendly products and water-saving techniques.</p>
-                </div>
+    <div class="container">
+        <!-- Login Form -->
+        <div id="loginForm" class="login-container">
+            <h2>Login to Waschsalon</h2>
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
             </div>
-        </section>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button onclick="login()">Login</button>
+            <div id="errorMessage" class="error-message"></div>
+            <div id="successMessage" class="success-message"></div>
+        </div>
 
-        <section class="about">
-            <h2 class="section-title">About Us</h2>
-            <p>At [Salon Name], we are committed to providing top-notch washing services with a focus on quality,
-                customer satisfaction, and the environment. Whether you're looking for a quick refresh or a detailed
-                clean, we have the perfect option for you. Come experience the best wash salon in town!</p>
-        </section>
-
-        <section class="contact">
-            <h2 class="section-title">Contact Us</h2>
-            <p>We'd love to hear from you! Feel free to get in touch with us for bookings, questions, or more
-                information.</p>
-            <a href="contact.html" class="cta-button">Contact Us</a>
-        </section>
-
+        <!-- Dashboard -->
+        <div id="dashboard" class="dashboard">
+            <h2>Welcome to Waschsalon</h2>
+            <div id="deviceList" class="device-list">
+                <!-- Devices will be populated here -->
+            </div>
+            <div id="userManagement" class="user-management">
+                <h3>Create New User</h3>
+                <div class="form-group">
+                    <label for="newUsername">Username:</label>
+                    <input type="text" id="newUsername" name="newUsername">
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">Password:</label>
+                    <input type="password" id="newPassword" name="newPassword">
+                </div>
+                <div class="form-group">
+                    <label for="isAdmin">
+                        <input type="checkbox" id="isAdmin" name="isAdmin">
+                        Make Admin
+                    </label>
+                </div>
+                <button onclick="createUser()">Create User</button>
+                <div id="createUserError" class="error-message"></div>
+                <div id="createUserSuccess" class="success-message"></div>
+            </div>
+            <button onclick="logout()" class="logout-btn">Logout</button>
+        </div>
     </div>
 
-    <footer>
-        <p>&copy; 2025 [Salon Name]. All Rights Reserved.</p>
-        <p>Follow us on social media for the latest updates!</p>
-    </footer>
+    <script>
+        let token = '';
+        const API_URL = 'http://localhost:8000';
 
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+
+            try {
+                const formData = new URLSearchParams();
+                formData.append('username', username);
+                formData.append('password', password);
+
+                const response = await fetch(`${API_URL}/token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    token = data.access_token;
+                    errorMessage.style.display = 'none';
+                    successMessage.textContent = 'Login successful!';
+                    successMessage.style.display = 'block';
+
+                    // Show dashboard
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('dashboard').style.display = 'block';
+
+                    // Load devices
+                    loadDevices();
+                } else {
+                    throw new Error(data.detail || 'Login failed');
+                }
+            } catch (error) {
+                errorMessage.textContent = error.message;
+                errorMessage.style.display = 'block';
+                successMessage.style.display = 'none';
+            }
+        }
+
+        async function loadDevices() {
+            try {
+                const response = await fetch(`${API_URL}/devices`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load devices');
+                }
+
+                const devices = await response.json();
+                const deviceList = document.getElementById('deviceList');
+                deviceList.innerHTML = '';
+
+                devices.forEach(device => {
+                    const deviceCard = createDeviceCard(device);
+                    deviceList.appendChild(deviceCard);
+                });
+            } catch (error) {
+                console.error('Error loading devices:', error);
+            }
+        }
+
+        function createDeviceCard(device) {
+            const div = document.createElement('div');
+            div.className = 'device-card';
+
+            const status = device.user_id ? 'In Use' : 'Available';
+            const timeLeft = device.time_left ? `${Math.round(device.time_left / 60)} minutes` : '-';
+
+            div.innerHTML = `
+                <h3>Device ${device.id}</h3>
+                <div class="device-status">Status: ${status}</div>
+                <div class="device-timer">Time Left: ${timeLeft}</div>
+            `;
+
+            return div;
+        }
+
+        function logout() {
+            token = '';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        // Refresh devices every 5 seconds when dashboard is visible
+        setInterval(() => {
+            if (document.getElementById('dashboard').style.display === 'block') {
+                loadDevices();
+            }
+        }, 5000);
+
+        async function createUser() {
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+            const isAdmin = document.getElementById('isAdmin').checked;
+            const errorMessage = document.getElementById('createUserError');
+            const successMessage = document.getElementById('createUserSuccess');
+
+            if (!username || !password) {
+                errorMessage.textContent = 'Username and password are required';
+                errorMessage.style.display = 'block';
+                successMessage.style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/user`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        name: username,
+                        password: password,
+                        is_admin: isAdmin
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    errorMessage.style.display = 'none';
+                    successMessage.textContent = 'User created successfully!';
+                    successMessage.style.display = 'block';
+
+                    // Clear the form
+                    document.getElementById('newUsername').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('isAdmin').checked = false;
+                } else {
+                    throw new Error(data.detail || 'Failed to create user');
+                }
+            } catch (error) {
+                errorMessage.textContent = error.message;
+                errorMessage.style.display = 'block';
+                successMessage.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 
 </html>

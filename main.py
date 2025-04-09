@@ -1,42 +1,84 @@
-# main.py
+from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi import FastAPI, WebSocket, Request
+from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, WebSocket, Request, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import Column, Float, Integer, String, DateTime, select
+from sqlalchemy import Column, Float, Integer, String, DateTime, Boolean, select
 from datetime import datetime, timezone, timedelta
 from contextlib import asynccontextmanager
 from typing import Dict, Optional
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel
 
 # FastAPI setup
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables
+    # Create tables if they don't exist (instead of dropping and recreating)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        
+        # Create an initial admin user only if no users exist
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(User))
+            if not result.scalars().first():  # Only create admin if no users exist
+                admin_user = User(
+                    name="admin",
+                    cash=0,
+                    hashed_password=pwd_context.hash("admin"),
+                    is_admin=True
+                )
+                session.add(admin_user)
+                await session.commit()
     yield
 
 app = FastAPI(lifespan=lifespan)
 templates = Jinja2Templates(directory="HTML")
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # TODO: In production, replace with frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Database setup
-DATABASE_URL = "mysql+aiomysql://admin:password@localhost:3306/waschplan"
+DATABASE_URL = "mysql+aiomysql://admin:password@localhost:3306/waschplan" #TODO: Change this
 engine = create_async_engine(DATABASE_URL, echo=True)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
+
+# Auth configuration
+SECRET_KEY = "your-secret-key-here"  # TODO: Change this!
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # User model
 class User(Base):
     __tablename__ = "user"
     uid = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255))  #maximum length of 255 characters
+    name = Column(String(255))
     cash = Column(Float)
     creation_time = Column(DateTime, default=datetime.now(timezone.utc))
+    hashed_password = Column(String(255))
+    is_admin = Column(Boolean, default=False)
 
     def _tojson(self):
-        return {"uid": self.uid, "name": self.name, "cash": self.cash, "creation_time": self.creation_time}
+        return {
+            "uid": self.uid,
+            "name": self.name,
+            "cash": self.cash,
+            "creation_time": self.creation_time,
+            "is_admin": self.is_admin
+        }
 
 # Device model
 class Device(Base):
@@ -52,19 +94,93 @@ class Device(Base):
             "end_time": self.end_time,
             "time_left": (self.end_time.replace(tzinfo=timezone.utc) - datetime.now(timezone.utc)).total_seconds() if self.end_time else 0
         }
+@app.get("/test", response_class=HTMLResponse)
+def read_index(request: Request):
+    return templates.TemplateResponse("test.html", {"request": request})
 
 @app.get("/", response_class=HTMLResponse)
 def read_index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid authentication credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        uid: int = payload.get("sub")
+        if uid is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(User).where(User.uid == uid))
+        user = result.scalars().first()
+        if user is None:
+            raise credentials_exception
+        return user
+
+async def get_admin_user(current_user: User = Depends(get_current_user)):
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions"
+        )
+    return current_user
+
+@app.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(User).where(User.name == form_data.username)
+        )
+        user = result.scalars().first()
+        if not user or not pwd_context.verify(form_data.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+    access_token = jwt.encode(
+        {"sub": str(user.uid), "exp": datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)},
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+class UserCreate(BaseModel):
+    name: str
+    password: str
+    is_admin: bool = False
 
 @app.post("/user")
-async def create_user(name: str):
+async def create_user(
+    user_data: UserCreate,
+    current_user: User = Depends(get_admin_user)
+):
     async with AsyncSessionLocal() as session:
-        new_user = User(name=name, cash=0)
+        # Check if username already exists
+        result = await session.execute(select(User).where(User.name == user_data.name))
+        if result.scalars().first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already exists"
+            )
+            
+        new_user = User(
+            name=user_data.name,
+            cash=0,
+            hashed_password=pwd_context.hash(user_data.password),
+            is_admin=user_data.is_admin
+        )
         session.add(new_user)
         await session.commit()
-        return {"uid": new_user._tojson()}
+        return new_user._tojson()
     
 @app.get("/user")
 async def get_user(uid: int):
@@ -142,7 +258,10 @@ async def start_device(device_id: int, user_id: int, duration_minutes: int):
         return device._tojson()
 
 @app.get("/device")
-async def get_device(device_id: int):
+async def get_device(
+    device_id: int,
+    current_user: User = Depends(get_current_user)
+):
     if not 1 <= device_id <= 5:
         return {"error": "Invalid device ID"}
     
@@ -223,5 +342,14 @@ async def time_ws_endpoint(websocket: WebSocket, device_id: int):
                     })
                     
         await asyncio.sleep(1)
+
+@app.get("/users")
+#async def get_all_users(current_user: User = Depends(get_admin_user)): #TODO: make admin only
+async def get_all_users():
+    """Get all users. Only accessible by admin users."""
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(User))
+        users = result.scalars().all()
+        return [user._tojson() for user in users]
 
 

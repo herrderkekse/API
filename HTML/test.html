@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .response {
+            background: #f5f5f5;
+            padding: 10px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+
+        .form-group {
+            margin: 10px 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>API Test Interface</h1>
+
+    <!-- Authentication Section -->
+    <div class="section">
+        <h2>Authentication</h2>
+        <div id="loginForm">
+            <div class="form-group">
+                <label>Username:</label>
+                <input type="text" id="username">
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="password">
+            </div>
+            <button onclick="login()">Login</button>
+            <div id="loginResponse" class="response"></div>
+        </div>
+        <div>
+            <strong>Current Token:</strong>
+            <div id="currentToken" style="word-break: break-all;"></div>
+        </div>
+    </div>
+
+    <!-- User Management Section -->
+    <div class="section">
+        <h2>User Management</h2>
+
+        <!-- Create User -->
+        <h3>Create User</h3>
+        <div class="form-group">
+            <label>Username:</label>
+            <input type="text" id="createUsername">
+        </div>
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="createPassword">
+        </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="createIsAdmin">
+                Is Admin
+            </label>
+        </div>
+        <button onclick="createUser()">Create User</button>
+        <div id="createUserResponse" class="response"></div>
+
+        <!-- Get All Users -->
+        <h3>Get All Users</h3>
+        <button onclick="getAllUsers()">Get Users</button>
+        <div id="getAllUsersResponse" class="response"></div>
+
+        <!-- Get Single User -->
+        <h3>Get Single User</h3>
+        <div class="form-group">
+            <label>User ID:</label>
+            <input type="number" id="getUserId">
+        </div>
+        <button onclick="getUser()">Get User</button>
+        <div id="getUserResponse" class="response"></div>
+
+        <!-- Update User -->
+        <h3>Update User</h3>
+        <div class="form-group">
+            <label>User ID:</label>
+            <input type="number" id="updateUserId">
+        </div>
+        <div class="form-group">
+            <label>New Name:</label>
+            <input type="text" id="updateUsername">
+        </div>
+        <div class="form-group">
+            <label>New Cash:</label>
+            <input type="number" id="updateUserCash" step="0.01">
+        </div>
+        <button onclick="updateUser()">Update User</button>
+        <div id="updateUserResponse" class="response"></div>
+
+        <!-- Delete User -->
+        <h3>Delete User</h3>
+        <div class="form-group">
+            <label>User ID:</label>
+            <input type="number" id="deleteUserId">
+        </div>
+        <button onclick="deleteUser()">Delete User</button>
+        <div id="deleteUserResponse" class="response"></div>
+    </div>
+
+    <!-- Device Management Section -->
+    <div class="section">
+        <h2>Device Management</h2>
+
+        <!-- Get All Devices -->
+        <h3>Get All Devices</h3>
+        <button onclick="getAllDevices()">Get Devices</button>
+        <div id="getAllDevicesResponse" class="response"></div>
+
+        <!-- Get Single Device -->
+        <h3>Get Single Device</h3>
+        <div class="form-group">
+            <label>Device ID (1-5):</label>
+            <input type="number" id="getDeviceId" min="1" max="5">
+        </div>
+        <button onclick="getDevice()">Get Device</button>
+        <div id="getDeviceResponse" class="response"></div>
+
+        <!-- Start Device -->
+        <h3>Start Device</h3>
+        <div class="form-group">
+            <label>Device ID (1-5):</label>
+            <input type="number" id="startDeviceId" min="1" max="5">
+        </div>
+        <div class="form-group">
+            <label>User ID:</label>
+            <input type="number" id="startDeviceUserId">
+        </div>
+        <div class="form-group">
+            <label>Duration (minutes):</label>
+            <input type="number" id="startDeviceDuration">
+        </div>
+        <button onclick="startDevice()">Start Device</button>
+        <div id="startDeviceResponse" class="response"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        let token = '';
+
+        // Helper function to display responses
+        function displayResponse(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = `response ${isError ? 'error' : 'success'}`;
+        }
+
+        // Helper function for API calls
+        async function apiCall(endpoint, options = {}) {
+            try {
+                if (token && !endpoint.includes('/token')) {
+                    options.headers = {
+                        ...options.headers,
+                        'Authorization': `Bearer ${token}`
+                    };
+                }
+                const response = await fetch(`${API_URL}${endpoint}`, options);
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'API call failed');
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Authentication
+        async function login() {
+            try {
+                const formData = new URLSearchParams();
+                formData.append('username', document.getElementById('username').value);
+                formData.append('password', document.getElementById('password').value);
+
+                const data = await apiCall('/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: formData
+                });
+
+                token = data.access_token;
+                document.getElementById('currentToken').textContent = token;
+                displayResponse('loginResponse', data);
+            } catch (error) {
+                displayResponse('loginResponse', { error: error.message }, true);
+            }
+        }
+
+        // User Management
+        async function createUser() {
+            try {
+                const data = await apiCall('/user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: document.getElementById('createUsername').value,
+                        password: document.getElementById('createPassword').value,
+                        is_admin: document.getElementById('createIsAdmin').checked
+                    })
+                });
+                displayResponse('createUserResponse', data);
+            } catch (error) {
+                displayResponse('createUserResponse', { error: error.message }, true);
+            }
+        }
+
+        async function getAllUsers() {
+            try {
+                const data = await apiCall('/users');
+                displayResponse('getAllUsersResponse', data);
+            } catch (error) {
+                displayResponse('getAllUsersResponse', { error: error.message }, true);
+            }
+        }
+
+        async function getUser() {
+            try {
+                const userId = document.getElementById('getUserId').value;
+                const data = await apiCall(`/user?uid=${userId}`);
+                displayResponse('getUserResponse', data);
+            } catch (error) {
+                displayResponse('getUserResponse', { error: error.message }, true);
+            }
+        }
+
+        async function updateUser() {
+            try {
+                const userId = document.getElementById('updateUserId').value;
+                const name = document.getElementById('updateUsername').value;
+                const cash = document.getElementById('updateUserCash').value;
+                const data = await apiCall(`/user?uid=${userId}&name=${name}&cash=${cash}`, {
+                    method: 'PATCH'
+                });
+                displayResponse('updateUserResponse', data);
+            } catch (error) {
+                displayResponse('updateUserResponse', { error: error.message }, true);
+            }
+        }
+
+        async function deleteUser() {
+            try {
+                const userId = document.getElementById('deleteUserId').value;
+                const data = await apiCall(`/user?uid=${userId}`, {
+                    method: 'DELETE'
+                });
+                displayResponse('deleteUserResponse', data);
+            } catch (error) {
+                displayResponse('deleteUserResponse', { error: error.message }, true);
+            }
+        }
+
+        // Device Management
+        async function getAllDevices() {
+            try {
+                const response = await fetch(`${API_URL}/devices`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                displayResponse('getAllDevicesResponse', data);
+            } catch (error) {
+                console.error('Error:', error);
+                displayResponse('getAllDevicesResponse', { error: error.message }, true);
+            }
+        }
+
+        async function getDevice() {
+            try {
+                const deviceId = document.getElementById('getDeviceId').value;
+                const data = await apiCall(`/device?device_id=${deviceId}`);
+                displayResponse('getDeviceResponse', data);
+            } catch (error) {
+                displayResponse('getDeviceResponse', { error: error.message }, true);
+            }
+        }
+
+        async function startDevice() {
+            try {
+                const deviceId = document.getElementById('startDeviceId').value;
+                const userId = document.getElementById('startDeviceUserId').value;
+                const duration = document.getElementById('startDeviceDuration').value;
+                const data = await apiCall(`/device/start?device_id=${deviceId}&user_id=${userId}&duration_minutes=${duration}`, {
+                    method: 'POST'
+                });
+                displayResponse('startDeviceResponse', data);
+            } catch (error) {
+                displayResponse('startDeviceResponse', { error: error.message }, true);
+            }
+        }
+    </script>
+</body>
+
+</html>
