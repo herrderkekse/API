@@ -49,7 +49,8 @@ class Device(Base):
         return {
             "id": self.id,
             "user_id": self.user_id,
-            "end_time": self.end_time
+            "end_time": self.end_time,
+            "time_left": (self.end_time.replace(tzinfo=timezone.utc) - datetime.now(timezone.utc)).total_seconds() if self.end_time else 0
         }
 
 @app.get("/", response_class=HTMLResponse)
@@ -140,7 +141,6 @@ async def start_device(device_id: int, user_id: int, duration_minutes: int):
         await session.commit()
         return device._tojson()
 
-
 @app.get("/device")
 async def get_device(device_id: int):
     if not 1 <= device_id <= 5:
@@ -153,16 +153,40 @@ async def get_device(device_id: int):
         if not device:
             return {"error": "Device not found"}
         
+        if device.end_time:
+            # Make sure end_time is timezone-aware
+            if device.end_time.tzinfo is None:
+                device.end_time = device.end_time.replace(tzinfo=timezone.utc)
+            
+            time_left = max(0, (device.end_time - datetime.now(timezone.utc)).total_seconds())
+            if time_left <= 0:
+                # Reset device
+                device.user_id = None
+                device.end_time = None
+                await session.commit()
+        
         return device._tojson()
-
 
 @app.get("/devices")
 async def get_all_devices():
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(Device))
         devices = result.scalars().all()
+        
+        for device in devices:
+            if device.end_time:
+                # Make sure end_time is timezone-aware
+                if device.end_time.tzinfo is None:
+                    device.end_time = device.end_time.replace(tzinfo=timezone.utc)
+                
+                time_left = max(0, (device.end_time - datetime.now(timezone.utc)).total_seconds())
+                if time_left <= 0:
+                    # Reset device
+                    device.user_id = None
+                    device.end_time = None
+        
+        await session.commit()
         return [device._tojson() for device in devices]
-
 
 @app.websocket("/timeleft")
 async def time_ws_endpoint(websocket: WebSocket, device_id: int):
