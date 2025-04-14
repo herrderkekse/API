@@ -13,26 +13,57 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
+from config.devices import DEVICES
 
 # FastAPI setup
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables if they don't exist (instead of dropping and recreating)
+    # Create tables if they don't exist
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         
-        # Create an initial admin user only if no users exist
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(select(User))
-            if not result.scalars().first():  # Only create admin if no users exist
-                admin_user = User(
-                    name="admin",
-                    cash=0,
-                    hashed_password=pwd_context.hash("admin"),
-                    is_admin=True
+    async with AsyncSessionLocal() as session:
+        # Create initial admin user if no users exist
+        result = await session.execute(select(User))
+        if not result.scalars().first():
+            admin_user = User(
+                name="admin",
+                cash=0,
+                hashed_password=pwd_context.hash("admin"),
+                is_admin=True
+            )
+            session.add(admin_user)
+            
+        # Update or create devices based on config
+        for device_config in DEVICES:
+            result = await session.execute(
+                select(Device).where(Device.id == device_config["id"])
+            )
+            device = result.scalars().first()
+            
+            if device:
+                # Update existing device
+                device.name = device_config["name"]
+                device.type = device_config["type"]
+            else:
+                # Create new device
+                device = Device(
+                    id=device_config["id"],
+                    name=device_config["name"],
+                    type=device_config["type"]
                 )
-                session.add(admin_user)
-                await session.commit()
+                session.add(device)
+        
+        # Remove devices that are no longer in config
+        result = await session.execute(select(Device))
+        existing_devices = result.scalars().all()
+        config_device_ids = [d["id"] for d in DEVICES]
+        
+        for device in existing_devices:
+            if device.id not in config_device_ids:
+                await session.delete(device)
+        
+        await session.commit()
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -84,12 +115,16 @@ class User(Base):
 class Device(Base):
     __tablename__ = "device"
     id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    type = Column(String(50), nullable=False)
     user_id = Column(Integer, nullable=True)  # NULL when device is free
     end_time = Column(DateTime, nullable=True)  # NULL when device is not running
     
     def _tojson(self):
         return {
             "id": self.id,
+            "name": self.name,
+            "type": self.type,
             "user_id": self.user_id,
             "end_time": self.end_time,
             "time_left": (self.end_time.replace(tzinfo=timezone.utc) - datetime.now(timezone.utc)).total_seconds() if self.end_time else 0
