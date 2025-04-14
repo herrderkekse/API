@@ -183,9 +183,14 @@ async def create_user(
         return new_user._tojson()
     
 @app.get("/user")
-async def get_user(uid: int):
+async def get_user(uid: int, current_user: User = Depends(get_current_user)):
     if not isinstance(uid, int):
         return {"error": "Invalid UID"}
+    if not current_user.is_admin and current_user.uid != uid:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this user"
+        )
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(User).where(User.uid == uid))
         user = result.scalars().first()
@@ -195,9 +200,14 @@ async def get_user(uid: int):
             return {"error": "User not found"}
 
 @app.delete("/user")
-async def delete_user(uid: int):
+async def delete_user(uid: int, current_user: User = Depends(get_current_user)):
     if not isinstance(uid, int):
         return {"error": "Invalid UID"}
+    if not current_user.is_admin and current_user.uid != uid:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this user"
+        )
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(User).where(User.uid == uid))
         user = result.scalars().first()
@@ -209,9 +219,19 @@ async def delete_user(uid: int):
             return {"error": "User not found"}
 
 @app.patch("/user")
-async def update_user(uid: int, name: str = None, cash: float = None):
+async def update_user(
+    uid: int, 
+    name: str = None, 
+    cash: float = None, 
+    current_user: User = Depends(get_current_user)
+):
     if not isinstance(uid, int):
         return {"error": "Invalid UID"}
+    if not current_user.is_admin and current_user.uid != uid:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this user"
+        )
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(User).where(User.uid == uid))
         user = result.scalars().first()
