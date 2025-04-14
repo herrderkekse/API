@@ -150,7 +150,11 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         SECRET_KEY,
         algorithm=ALGORITHM
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "user_id": user.uid
+    }
 
 
 class UserCreate(BaseModel):
@@ -372,4 +376,7 @@ async def get_all_users():
         users = result.scalars().all()
         return [user._tojson() for user in users]
 
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request):
+    return templates.TemplateResponse("admin.html", {"request": request})
 
