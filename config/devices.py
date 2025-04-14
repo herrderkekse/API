@@ -1,7 +1,7 @@
 DEVICES = [
     {
         "id": 1,
-        "name": "My Washer 1",
+        "name": "Washer 1",
         "type": "washer"
     },
     {

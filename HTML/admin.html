@@ -152,6 +152,17 @@
         .device-card h3 {
             margin: 0 0 10px 0;
             color: #2C3E50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .device-type {
+            font-size: 0.8em;
+            padding: 3px 8px;
+            background-color: #E8F0FE;
+            border-radius: 4px;
+            color: #1967D2;
         }
 
         .device-status {
@@ -170,6 +181,9 @@
         .device-info {
             color: #666;
             font-size: 0.9em;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #eee;
         }
     </style>
 </head>
@@ -523,16 +537,24 @@
             }
 
             div.innerHTML = `
-                <h3>Device ${device.id}</h3>
+                <h3>
+                    ${device.name}
+                    <span class="device-type">${device.type}</span>
+                </h3>
                 <div class="device-status ${statusClass}">
                     ${statusText}
                 </div>
                 ${isInUse ? `
                     <div class="device-info">
+                        Device ID: ${device.id}<br>
                         User ID: ${device.user_id}<br>
                         Time Left: ${timeLeftText}
                     </div>
-                ` : ''}
+                ` : `
+                    <div class="device-info">
+                        Device ID: ${device.id}
+                    </div>
+                `}
             `;
 
             return div;
