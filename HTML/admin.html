@@ -120,6 +120,16 @@
         #dashboard {
             display: none;
         }
+
+        .create-button {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .header div {
+            display: flex;
+            gap: 10px;
+        }
     </style>
 </head>
 
@@ -144,7 +154,10 @@
         <div id="dashboard">
             <div class="header">
                 <h1>Waschsalon Admin Panel</h1>
-                <button onclick="logout()" class="logout-btn">Logout</button>
+                <div>
+                    <button onclick="openCreateModal()" class="button create-button">Create User</button>
+                    <button onclick="logout()" class="logout-btn">Logout</button>
+                </div>
             </div>
 
             <table class="user-table">
@@ -179,6 +192,30 @@
             </div>
             <button onclick="saveUserChanges()" class="button edit-button">Save Changes</button>
             <button onclick="closeEditModal()" class="button">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <h2>Create New User</h2>
+            <div class="form-group">
+                <label for="createUsername">Username:</label>
+                <input type="text" id="createUsername">
+            </div>
+            <div class="form-group">
+                <label for="createPassword">Password:</label>
+                <input type="password" id="createPassword">
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="createIsAdmin">
+                    Is Admin
+                </label>
+            </div>
+            <button onclick="createUser()" class="button create-button">Create User</button>
+            <button onclick="closeCreateModal()" class="button">Cancel</button>
+            <div id="createError" class="error-message"></div>
         </div>
     </div>
 
@@ -340,6 +377,57 @@
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
             document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        function openCreateModal() {
+            document.getElementById('createModal').style.display = 'block';
+            document.getElementById('createUsername').value = '';
+            document.getElementById('createPassword').value = '';
+            document.getElementById('createIsAdmin').checked = false;
+            document.getElementById('createError').style.display = 'none';
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').style.display = 'none';
+        }
+
+        async function createUser() {
+            const username = document.getElementById('createUsername').value;
+            const password = document.getElementById('createPassword').value;
+            const isAdmin = document.getElementById('createIsAdmin').checked;
+            const errorElement = document.getElementById('createError');
+
+            if (!username || !password) {
+                errorElement.textContent = 'Username and password are required';
+                errorElement.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/user`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        name: username,
+                        password: password,
+                        is_admin: isAdmin
+                    })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'Failed to create user');
+                }
+
+                closeCreateModal();
+                loadUsers();
+            } catch (error) {
+                errorElement.textContent = error.message;
+                errorElement.style.display = 'block';
+            }
         }
     </script>
 </body>

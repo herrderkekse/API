@@ -94,6 +94,7 @@ class Device(Base):
             "end_time": self.end_time,
             "time_left": (self.end_time.replace(tzinfo=timezone.utc) - datetime.now(timezone.utc)).total_seconds() if self.end_time else 0
         }
+
 @app.get("/test", response_class=HTMLResponse)
 def read_index(request: Request):
     return templates.TemplateResponse("test.html", {"request": request})
