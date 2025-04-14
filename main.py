@@ -309,11 +309,16 @@ async def start_device(device_id: int, user_id: int, duration_minutes: int):
             device = Device(id=device_id)
             session.add(device)
         elif device.end_time and device.end_time.replace(tzinfo=timezone.utc) > datetime.now(timezone.utc):
-            return {"error": "Device is currently in use"}
+            # Device is in use - check if it's the same user trying to add time
+            if device.user_id != user_id:
+                return {"error": "Device is currently in use by another user"}
+            # Add time to existing session
+            device.end_time = device.end_time.replace(tzinfo=timezone.utc) + timedelta(minutes=duration_minutes)
+        else:
+            # Start the device
+            device.user_id = user_id
+            device.end_time = datetime.now(timezone.utc) + timedelta(minutes=duration_minutes)
             
-        # Start the device
-        device.user_id = user_id
-        device.end_time = datetime.now(timezone.utc) + timedelta(minutes=duration_minutes)
         await session.commit()
         return device._tojson()
 
