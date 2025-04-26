@@ -193,6 +193,15 @@
         </div>
         <button onclick="startDevice()">Start Device</button>
         <div id="startDeviceResponse" class="response"></div>
+
+        <!-- Stop Device -->
+        <h3>Stop Device</h3>
+        <div class="form-group">
+            <label>Device ID (1-5):</label>
+            <input type="number" id="stopDeviceId" min="1" max="5">
+        </div>
+        <button onclick="stopDevice()">Stop Device</button>
+        <div id="stopDeviceResponse" class="response"></div>
     </div>
 
     <script>
@@ -215,6 +224,14 @@
                     options.headers = {
                         ...options.headers,
                         'Authorization': `Bearer ${token}`
+                    };
+                }
+                // Add idempotency key for POST/PATCH/PUT methods
+                if (['POST', 'PATCH', 'PUT'].includes(options.method)) {
+                    const timestamp = Date.now();
+                    options.headers = {
+                        ...options.headers,
+                        'X-Idempotency-Key': `${endpoint}-${timestamp}`
                     };
                 }
                 const response = await fetch(`${API_URL}${endpoint}`, options);
@@ -252,13 +269,17 @@
         // User Management
         async function createUser() {
             try {
+                const username = document.getElementById('createUsername').value;
+                const idempotencyKey = `create-user-${username}-${Date.now()}`;
+
                 const data = await apiCall('/user', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-Idempotency-Key': idempotencyKey
                     },
                     body: JSON.stringify({
-                        name: document.getElementById('createUsername').value,
+                        name: username,
                         password: document.getElementById('createPassword').value,
                         is_admin: document.getElementById('createIsAdmin').checked
                     })
@@ -293,8 +314,13 @@
                 const userId = document.getElementById('updateUserId').value;
                 const name = document.getElementById('updateUsername').value;
                 const cash = document.getElementById('updateUserCash').value;
+                const idempotencyKey = `update-user-${userId}-${Date.now()}`;
+
                 const data = await apiCall(`/user?uid=${userId}&name=${name}&cash=${cash}`, {
-                    method: 'PATCH'
+                    method: 'PATCH',
+                    headers: {
+                        'X-Idempotency-Key': idempotencyKey
+                    }
                 });
                 displayResponse('updateUserResponse', data);
             } catch (error) {
@@ -344,12 +370,34 @@
                 const deviceId = document.getElementById('startDeviceId').value;
                 const userId = document.getElementById('startDeviceUserId').value;
                 const duration = document.getElementById('startDeviceDuration').value;
+                const idempotencyKey = `start-device-${deviceId}-${userId}-${Date.now()}`;
+
                 const data = await apiCall(`/device/start?device_id=${deviceId}&user_id=${userId}&duration_minutes=${duration}`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {
+                        'X-Idempotency-Key': idempotencyKey
+                    }
                 });
                 displayResponse('startDeviceResponse', data);
             } catch (error) {
                 displayResponse('startDeviceResponse', { error: error.message }, true);
+            }
+        }
+
+        async function stopDevice() {
+            try {
+                const deviceId = document.getElementById('stopDeviceId').value;
+                const idempotencyKey = `stop-device-${deviceId}-${Date.now()}`;
+
+                const data = await apiCall(`/device/stop?device_id=${deviceId}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Idempotency-Key': idempotencyKey
+                    }
+                });
+                displayResponse('stopDeviceResponse', data);
+            } catch (error) {
+                displayResponse('stopDeviceResponse', { error: error.message }, true);
             }
         }
 

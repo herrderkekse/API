@@ -571,3 +571,49 @@ async def get_all_users():
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request):
     return templates.TemplateResponse("admin.html", {"request": request})
+
+@app.post("/device/stop")
+async def stop_device(
+    device_id: int,
+    current_user: User = Depends(get_admin_user)
+):
+    """Stop a device and reset its status. Also refunds the user for the time left. Only accessible by admin users."""
+    if not 1 <= device_id <= 5:
+        return {"error": "Invalid device ID"}
+    
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(Device).where(Device.id == device_id))
+        device = result.scalars().first()
+        
+        if not device:
+            return {"error": "Device not found"}
+            
+        if not device.end_time:
+            return {"error": "Device is not running"}
+            
+        # Calculate remaining time in minutes
+        remaining_time = (device.end_time.replace(tzinfo=timezone.utc) - datetime.now(timezone.utc)).total_seconds() / 60
+        
+        if remaining_time > 0:
+            # Calculate refund amount
+            device_config = next((d for d in DEVICES if d["id"] == device_id), None)
+            if device_config:
+                refund = (device_config["hourly_cost"] * remaining_time) / 60
+                
+                # Refund the user
+                if device.user_id:
+                    user_result = await session.execute(select(User).where(User.uid == device.user_id))
+                    user = user_result.scalars().first()
+                    if user:
+                        user.cash += refund
+        
+        # Reset device status
+        device.user_id = None
+        device.end_time = None
+        
+        await session.commit()
+        return {
+            "message": "Device stopped successfully",
+            "device": device._tojson(),
+            "refund_amount": refund if 'refund' in locals() else 0
+        }

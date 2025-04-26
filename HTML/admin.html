@@ -178,6 +178,14 @@
             color: #E74C3C;
         }
 
+        .stop-button {
+            background-color: #dc3545;
+            color: white;
+            margin-top: 8px;
+            display: block;
+            width: 100%;
+        }
+
         .device-info {
             color: #666;
             font-size: 0.9em;
@@ -549,6 +557,7 @@
                         Device ID: ${device.id}<br>
                         User ID: ${device.user_id}<br>
                         Time Left: ${timeLeftText}
+                        <button onclick="stopDevice(${device.id})" class="button stop-button">Stop Device</button>
                     </div>
                 ` : `
                     <div class="device-info">
@@ -562,6 +571,34 @@
 
         function startDeviceUpdates() {
             setInterval(loadDevices, 1000);
+        }
+
+        async function stopDevice(deviceId) {
+            if (!confirm('Are you sure you want to stop this device?')) {
+                return;
+            }
+
+            try {
+                const idempotencyKey = `stop-device-${deviceId}-${Date.now()}`;
+                const response = await fetch(`${API_URL}/device/stop?device_id=${deviceId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'X-Idempotency-Key': idempotencyKey
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to stop device');
+                }
+
+                // Refresh the devices display
+                loadDevices();
+            } catch (error) {
+                console.error('Error stopping device:', error);
+                alert(error.message);
+            }
         }
     </script>
 </body>
