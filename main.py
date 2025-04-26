@@ -45,12 +45,14 @@ async def lifespan(app: FastAPI):
                 # Update existing device
                 device.name = device_config["name"]
                 device.type = device_config["type"]
+                device.hourly_cost = device_config["hourly_cost"]
             else:
                 # Create new device
                 device = Device(
                     id=device_config["id"],
                     name=device_config["name"],
-                    type=device_config["type"]
+                    type=device_config["type"],
+                    hourly_cost=device_config["hourly_cost"]
                 )
                 session.add(device)
         
@@ -117,6 +119,7 @@ class Device(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
     type = Column(String(50), nullable=False)
+    hourly_cost = Column(Float, nullable=False)
     user_id = Column(Integer, nullable=True)  # NULL when device is free
     end_time = Column(DateTime, nullable=True)  # NULL when device is not running
     
@@ -125,6 +128,7 @@ class Device(Base):
             "id": self.id,
             "name": self.name,
             "type": self.type,
+            "hourly_cost": self.hourly_cost,
             "user_id": self.user_id,
             "end_time": self.end_time,
             "time_left": (self.end_time.replace(tzinfo=timezone.utc) - datetime.now(timezone.utc)).total_seconds() if self.end_time else 0
@@ -304,13 +308,30 @@ async def start_device(device_id: int, user_id: int, duration_minutes: int):
         result = await session.execute(select(Device).where(Device.id == device_id))
         device = result.scalars().first()
         
+        # Calculate cost for the duration
+        device_config = next((d for d in DEVICES if d["id"] == device_id), None)
+        if not device_config:
+            return {"error": "Device configuration not found"}
+            
+        cost = (device_config["hourly_cost"] * duration_minutes) / 60
+        
+        # Check if user has enough balance
+        if user.cash < cost:
+            return {"error": "Insufficient funds"}
+        
         if not device:
             # First time setup - create device
-            device = Device(id=device_id)
+            device = Device(
+                id=device_id,
+                name=device_config["name"],
+                type=device_config["type"],
+                hourly_cost=device_config["hourly_cost"]
+            )
             session.add(device)
         elif device.end_time and device.end_time.replace(tzinfo=timezone.utc) > datetime.now(timezone.utc):
             # Device is in use - check if it's the same user trying to add time
             if device.user_id != user_id:
+                # TODO: is that what we want? How do we handle left over time from previous user?
                 return {"error": "Device is currently in use by another user"}
             # Add time to existing session
             device.end_time = device.end_time.replace(tzinfo=timezone.utc) + timedelta(minutes=duration_minutes)
@@ -318,9 +339,16 @@ async def start_device(device_id: int, user_id: int, duration_minutes: int):
             # Start the device
             device.user_id = user_id
             device.end_time = datetime.now(timezone.utc) + timedelta(minutes=duration_minutes)
+        
+        # Deduct cost from user's balance
+        user.cash -= cost
             
         await session.commit()
-        return device._tojson()
+        return {
+            "device": device._tojson(),
+            "cost": cost,
+            "remaining_balance": user.cash
+        }
 
 @app.get("/device")
 async def get_device(
