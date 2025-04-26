@@ -15,7 +15,8 @@ interface Device {
   type: string;
   hourly_cost: number;
   user_id: number | null;
-  time_left: number;
+  end_time: string | null;
+  time_left: number | null;
 }
 
 interface CreateUserModal {
@@ -32,6 +33,99 @@ interface EditUserModal {
   newPassword?: string;
   newIsAdmin?: boolean;
 }
+
+const formatTimeLeft = (seconds: number): string => {
+  if (seconds <= 0) return 'Not running';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+
+  const parts = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  parts.push(`${remainingSeconds}s`);
+
+  return parts.join(' ');
+};
+
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(amount);
+};
+
+const DeviceCard = ({
+  device,
+  onStopDevice,
+  currentUser,
+  users
+}: {
+  device: Device;
+  onStopDevice: (id: number) => void;
+  currentUser: User;
+  users: User[];
+}) => {
+  const isRunning = device.time_left && device.time_left > 0;
+  const isAdmin = currentUser.is_admin;
+  const deviceUser = users.find(u => u.uid === device.user_id);
+  const canStop = isAdmin || currentUser.uid === device.user_id;
+
+  return (
+    <div className={`device-card ${isRunning ? 'running' : 'available'}`}>
+      <div className="device-header">
+        <h3>{device.name}</h3>
+        <span className="device-type">{device.type}</span>
+      </div>
+
+      <div className="device-info">
+        <div className="info-row">
+          <span className="label">Status:</span>
+          <span className={`status ${isRunning ? 'status-running' : 'status-available'}`}>
+            {isRunning ? 'Running' : 'Available'}
+          </span>
+        </div>
+
+        <div className="info-row">
+          <span className="label">Cost:</span>
+          <span className="cost">{formatCurrency(device.hourly_cost)}/hour</span>
+        </div>
+
+        {isRunning && (
+          <>
+            <div className="info-row">
+              <span className="label">Time Left:</span>
+              <span className="time-left">{formatTimeLeft(device.time_left || 0)}</span>
+            </div>
+
+            <div className="info-row">
+              <span className="label">End Time:</span>
+              <span className="end-time">
+                {device.end_time ? new Date(device.end_time).toLocaleString() : 'N/A'}
+              </span>
+            </div>
+
+            <div className="info-row">
+              <span className="label">User:</span>
+              <span className="user-info">
+                {deviceUser ? deviceUser.name : `ID: ${device.user_id}`}
+              </span>
+            </div>
+
+            {canStop && (
+              <button
+                onClick={() => onStopDevice(device.id)}
+                className="button stop-button"
+              >
+                Stop Device
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const CreateUserModal = ({
   isOpen,
@@ -169,13 +263,19 @@ export function Dashboard() {
     isAdmin: false
   });
   const [error, setError] = useState<string | null>(null);
-
+  const [deviceWebsockets, setDeviceWebsockets] = useState<{ [key: number]: WebSocket }>({});
   const API_URL = 'http://localhost:8000';
+  const WS_URL = 'ws://localhost:8000';
   const token = localStorage.getItem('token');
 
   useEffect(() => {
     loadUsers();
     loadDevices();
+
+    return () => {
+      // Cleanup WebSocket connections on component unmount
+      Object.values(deviceWebsockets).forEach(ws => ws.close());
+    };
   }, []);
 
   const loadUsers = async () => {
@@ -203,9 +303,48 @@ export function Dashboard() {
       if (!response.ok) throw new Error('Failed to load devices');
       const data = await response.json();
       setDevices(data);
+      initializeDeviceWebsockets(data);  // Initialize WebSockets after loading devices
     } catch (error) {
       console.error('Error loading devices:', error);
     }
+  };
+
+  const initializeDeviceWebsockets = (devices: Device[]) => {
+    // Close existing connections
+    Object.values(deviceWebsockets).forEach(ws => ws.close());
+    const newWebsockets: { [key: number]: WebSocket } = {};
+
+    devices.forEach(device => {
+      const ws = new WebSocket(`${WS_URL}/device/ws/timeleft/${device.id}`);
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        setDevices(prevDevices =>
+          prevDevices.map(d => {
+            if (d.id === data.device_id) {
+              return {
+                ...d,
+                user_id: data.user_id,
+                time_left: data.time_left
+              };
+            }
+            return d;
+          })
+        );
+      };
+
+      ws.onerror = (error) => {
+        console.error(`WebSocket error for device ${device.id}:`, error);
+      };
+
+      ws.onclose = () => {
+        console.log(`WebSocket closed for device ${device.id}`);
+      };
+
+      newWebsockets[device.id] = ws;
+    });
+
+    setDeviceWebsockets(newWebsockets);
   };
 
   const handleLogout = () => {
@@ -222,7 +361,7 @@ export function Dashboard() {
         }
       });
       if (!response.ok) throw new Error('Failed to stop device');
-      loadDevices();
+      // Remove loadDevices() call as WebSocket will handle the update
     } catch (error) {
       console.error('Error stopping device:', error);
     }
@@ -348,31 +487,16 @@ export function Dashboard() {
         </div>
 
         <div className="devices-section">
-          <h2>Device Status</h2>
+          <h2>Devices</h2>
           <div className="device-grid">
             {devices.map(device => (
-              <div key={device.id} className="device-card" data-device-id={device.id}>
-                <h3>
-                  {device.name}
-                  <span className="device-type">{device.type}</span>
-                </h3>
-                <p>Cost: ${device.hourly_cost}/hour</p>
-                <p className={`device-status ${device.user_id ? 'status-in-use' : 'status-available'}`}>
-                  {device.user_id ? 'In Use' : 'Available'}
-                </p>
-                <p className="time-left">Time Left: {Math.round(device.time_left)} seconds</p>
-                {device.user_id && (
-                  <>
-                    <p className="user-info">User ID: {device.user_id}</p>
-                    <button
-                      onClick={() => handleStopDevice(device.id)}
-                      className="button stop-button"
-                    >
-                      Stop Device
-                    </button>
-                  </>
-                )}
-              </div>
+              <DeviceCard
+                key={device.id}
+                device={device}
+                onStopDevice={handleStopDevice}
+                currentUser={users.find(u => u.is_admin) || { uid: 0, name: '', cash: 0, creation_time: new Date().toISOString(), is_admin: false }}
+                users={users}
+              />
             ))}
           </div>
         </div>
