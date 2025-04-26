@@ -408,6 +408,48 @@ async def time_ws_endpoint(websocket: WebSocket, device_id: int):
                     
         await asyncio.sleep(1)
 
+@app.websocket("/device/status")
+async def device_status_ws_endpoint(websocket: WebSocket, device_id: int):
+    await websocket.accept()
+    if not isinstance(device_id, int) or device_id < 1 or device_id > 5:
+        await websocket.close(code=1003, reason="Invalid device ID")
+        return
+
+    last_status = None
+    while True:
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(Device).where(Device.id == device_id))
+            device = result.scalars().first()
+            
+            if not device or not device.end_time:
+                current_status = False
+            else:
+                # Make sure end_time is timezone-aware
+                if device.end_time.tzinfo is None:
+                    device.end_time = device.end_time.replace(tzinfo=timezone.utc)
+                
+                time_left = (device.end_time - datetime.now(timezone.utc)).total_seconds()
+                if time_left <= 0:
+                    # Reset device
+                    device.user_id = None
+                    device.end_time = None
+                    await session.commit()
+                    current_status = False
+                else:
+                    current_status = True
+            
+            # Only send update if status has changed
+            if current_status != last_status:
+                await websocket.send_json({
+                    "device_id": device_id,
+                    "running": current_status
+                })
+                last_status = current_status
+                    
+        await asyncio.sleep(1)
+
+
+
 @app.get("/users")
 #async def get_all_users(current_user: User = Depends(get_admin_user)): #TODO: make admin only
 async def get_all_users():

@@ -143,6 +143,26 @@
     <div class="section">
         <h2>Device Management</h2>
 
+        <!-- Time Left Websocket Test -->
+        <h3>Time Left Websocket Test</h3>
+        <div class="form-group">
+            <label>Device ID (1-5):</label>
+            <input type="number" id="wsTimeLeftDeviceId" min="1" max="5" value="1">
+        </div>
+        <button onclick="connectTimeLeftWS()">Connect WS</button>
+        <button onclick="disconnectTimeLeftWS()">Disconnect WS</button>
+        <div id="wsTimeLeftResponse" class="response"></div>
+
+        <!-- Device Status Websocket Test -->
+        <h3>Device Status Websocket Test</h3>
+        <div class="form-group">
+            <label>Device ID (1-5):</label>
+            <input type="number" id="wsDeviceId" min="1" max="5" value="1">
+        </div>
+        <button onclick="connectDeviceStatusWS()">Connect WS</button>
+        <button onclick="disconnectDeviceStatusWS()">Disconnect WS</button>
+        <div id="wsDeviceStatusResponse" class="response"></div>
+
         <!-- Get All Devices -->
         <h3>Get All Devices</h3>
         <button onclick="getAllDevices()">Get Devices</button>
@@ -178,6 +198,8 @@
     <script>
         const API_URL = 'http://localhost:8000';
         let token = '';
+        let deviceStatusSocket = null;
+        let timeLeftSocket = null;
 
         // Helper function to display responses
         function displayResponse(elementId, data, isError = false) {
@@ -328,6 +350,108 @@
                 displayResponse('startDeviceResponse', data);
             } catch (error) {
                 displayResponse('startDeviceResponse', { error: error.message }, true);
+            }
+        }
+
+        function connectDeviceStatusWS() {
+            const deviceId = document.getElementById('wsDeviceId').value;
+            const wsUrl = `ws://localhost:8000/device/status?device_id=${deviceId}`;
+
+            if (deviceStatusSocket) {
+                deviceStatusSocket.close();
+            }
+
+            deviceStatusSocket = new WebSocket(wsUrl);
+
+            deviceStatusSocket.onopen = function (e) {
+                displayResponse('wsDeviceStatusResponse', {
+                    status: 'Connected',
+                    timestamp: new Date().toISOString()
+                });
+            };
+
+            deviceStatusSocket.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+                displayResponse('wsDeviceStatusResponse', {
+                    status: 'Message received',
+                    data: data,
+                    timestamp: new Date().toISOString()
+                });
+            };
+
+            deviceStatusSocket.onclose = function (event) {
+                displayResponse('wsDeviceStatusResponse', {
+                    status: 'Disconnected',
+                    code: event.code,
+                    reason: event.reason,
+                    timestamp: new Date().toISOString()
+                });
+            };
+
+            deviceStatusSocket.onerror = function (error) {
+                displayResponse('wsDeviceStatusResponse', {
+                    status: 'Error',
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                }, true);
+            };
+        }
+
+        function disconnectDeviceStatusWS() {
+            if (deviceStatusSocket) {
+                deviceStatusSocket.close();
+                deviceStatusSocket = null;
+            }
+        }
+
+        function connectTimeLeftWS() {
+            const deviceId = document.getElementById('wsTimeLeftDeviceId').value;
+            const wsUrl = `ws://localhost:8000/timeleft?device_id=${deviceId}`;
+
+            if (timeLeftSocket) {
+                timeLeftSocket.close();
+            }
+
+            timeLeftSocket = new WebSocket(wsUrl);
+
+            timeLeftSocket.onopen = function (e) {
+                displayResponse('wsTimeLeftResponse', {
+                    status: 'Connected',
+                    timestamp: new Date().toISOString()
+                });
+            };
+
+            timeLeftSocket.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+                displayResponse('wsTimeLeftResponse', {
+                    status: 'Message received',
+                    data: data,
+                    timestamp: new Date().toISOString()
+                });
+            };
+
+            timeLeftSocket.onclose = function (event) {
+                displayResponse('wsTimeLeftResponse', {
+                    status: 'Disconnected',
+                    code: event.code,
+                    reason: event.reason,
+                    timestamp: new Date().toISOString()
+                });
+            };
+
+            timeLeftSocket.onerror = function (error) {
+                displayResponse('wsTimeLeftResponse', {
+                    status: 'Error',
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                }, true);
+            };
+        }
+
+        function disconnectTimeLeftWS() {
+            if (timeLeftSocket) {
+                timeLeftSocket.close();
+                timeLeftSocket = null;
             }
         }
     </script>
