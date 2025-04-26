@@ -440,10 +440,13 @@ async def device_status_ws_endpoint(websocket: WebSocket, device_id: int):
             
             # Only send update if status has changed
             if current_status != last_status:
-                await websocket.send_json({
+                response = {
                     "device_id": device_id,
                     "running": current_status
-                })
+                }
+                if current_status:
+                    response["end_time"] = device.end_time.isoformat()
+                await websocket.send_json(response)
                 last_status = current_status
                     
         await asyncio.sleep(1)
