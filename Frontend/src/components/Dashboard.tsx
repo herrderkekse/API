@@ -129,27 +129,17 @@ const EditUserModal = ({
               id="edit-username"
               value={user.name}
               onChange={(e) => onChange({ name: e.target.value })}
-              required
             />
           </div>
           <div className="form-group">
-            <label htmlFor="edit-password">New Password (optional):</label>
+            <label htmlFor="edit-cash">Cash:</label>
             <input
-              type="password"
-              id="edit-password"
-              placeholder="Leave blank to keep current password"
-              onChange={(e) => onChange({ password: e.target.value })}
+              type="number"
+              id="edit-cash"
+              value={user.cash}
+              onChange={(e) => onChange({ cash: parseFloat(e.target.value) })}
+              step="0.01"
             />
-          </div>
-          <div className="form-group">
-            <label>
-              <input
-                type="checkbox"
-                checked={user.is_admin}
-                onChange={(e) => onChange({ is_admin: e.target.checked })}
-              />
-              Admin User
-            </label>
           </div>
           {error && <div className="error-message">{error}</div>}
           <div className="button-group">
@@ -305,17 +295,27 @@ export function Dashboard() {
     if (!editingUser) return;
 
     try {
+      // Create update payload based on what's changed
+      const updateData: {
+        name?: string;
+        cash?: number;
+      } = {};
+
+      // Only include fields that are actually changed
+      if (editingUser.name) {
+        updateData.name = editingUser.name;
+      }
+      if (editingUser.cash !== undefined) {
+        updateData.cash = editingUser.cash;
+      }
+
       const response = await fetch(`${API_URL}/user/${editingUser.uid}`, {
-        method: 'PUT',
+        method: 'PATCH',  // Changed from PUT to PATCH
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          name: editingUser.name,
-          password: (editingUser as any).password, // Only included if changed
-          is_admin: editingUser.is_admin
-        })
+        body: JSON.stringify(updateData)
       });
 
       if (!response.ok) {
