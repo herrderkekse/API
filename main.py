@@ -14,6 +14,10 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from config.devices import DEVICES
+import json
+from functools import wraps
+from fastapi import Header, HTTPException
+from typing import Optional
 
 # FastAPI setup
 @asynccontextmanager
@@ -93,6 +97,74 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+# Idempotency key model
+class IdempotencyKey(Base):
+    __tablename__ = "idempotency_keys"
+    
+    key = Column(String(255), primary_key=True)
+    endpoint = Column(String(255), nullable=False)
+    response = Column(String(1024), nullable=False)  # Store the response as JSON string
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    expires_at = Column(DateTime, nullable=False)
+
+async def check_idempotency_key(
+    idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key")
+) -> Optional[str]:
+    if idempotency_key and len(idempotency_key) > 255:
+        raise HTTPException(
+            status_code=400,
+            detail="Idempotency key must be less than 255 characters"
+        )
+    return idempotency_key
+
+def idempotent_operation(ttl_hours: int = 24):
+    def datetime_handler(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        raise TypeError(f'Object of type {type(obj)} is not JSON serializable')
+
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            idempotency_key = kwargs.get("idempotency_key")
+            if not idempotency_key:
+                return await func(*args, **kwargs)
+            
+            async with AsyncSessionLocal() as session:
+                # Check for existing key
+                result = await session.execute(
+                    select(IdempotencyKey).where(IdempotencyKey.key == idempotency_key)
+                )
+                existing_key = result.scalars().first()
+                
+                if existing_key:
+                    if existing_key.expires_at < datetime.now(timezone.utc):
+                        # Key expired, delete it
+                        await session.delete(existing_key)
+                        await session.commit()
+                    else:
+                        # Return cached response
+                        return json.loads(existing_key.response)
+                
+                # Execute the original function
+                response = await func(*args, **kwargs)
+                
+                # Store the response
+                idempotency_record = IdempotencyKey(
+                    key=idempotency_key,
+                    endpoint=func.__name__,
+                    response=json.dumps(response, default=datetime_handler),
+                    expires_at=datetime.now(timezone.utc) + timedelta(hours=ttl_hours)
+                )
+                session.add(idempotency_record)
+                await session.commit()
+                
+                return response
+        return wrapper
+    return decorator
+
 
 # User model
 class User(Base):
@@ -291,7 +363,13 @@ async def update_user(
 
 
 @app.post("/device/start")
-async def start_device(device_id: int, user_id: int, duration_minutes: int):
+@idempotent_operation(ttl_hours=24)
+async def start_device(
+    device_id: int,
+    user_id: int,
+    duration_minutes: int,
+    idempotency_key: str = Depends(check_idempotency_key)
+):
     if not 1 <= device_id <= 5:
         return {"error": "Invalid device ID"}
     if duration_minutes <= 0:
@@ -493,4 +571,3 @@ async def get_all_users():
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request):
     return templates.TemplateResponse("admin.html", {"request": request})
-

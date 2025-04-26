@@ -417,10 +417,13 @@
         async function startDevice(deviceId) {
             try {
                 const duration = document.getElementById(`duration-${deviceId}`).value;
+                const idempotencyKey = `start-device-${deviceId}-${currentUser.uid}-${Date.now()}`;
+
                 const response = await fetch(`${API_URL}/device/start?device_id=${deviceId}&user_id=${currentUser.uid}&duration_minutes=${duration}`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token}`,
+                        'X-Idempotency-Key': idempotencyKey
                     }
                 });
 
@@ -429,11 +432,18 @@
                     throw new Error(error.detail || 'Failed to start device');
                 }
 
-                // Refresh devices to show updated status
-                loadDevices();
+                await response.json(); // Wait for the response to be fully read
+
+                // Add a small delay before refreshing the devices
+                setTimeout(() => {
+                    loadDevices();
+                }, 500);
             } catch (error) {
                 console.error('Error starting device:', error);
-                alert(error.message);
+                // Only show alert for actual errors, not network-related updates
+                if (!error.message.includes('NetworkError')) {
+                    alert(error.message);
+                }
             }
         }
 
