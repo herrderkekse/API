@@ -294,6 +294,8 @@
         let token = '';
         const API_URL = 'http://localhost:8000';
         let currentEditUserId = null;
+        let deviceWebsockets = {};
+        const WS_URL = window.location.protocol === 'https:' ? 'wss://' : 'ws://' + window.location.host;
 
         async function login() {
             const username = document.getElementById('username').value;
@@ -305,7 +307,7 @@
                 formData.append('username', username);
                 formData.append('password', password);
 
-                const response = await fetch(`${API_URL}/token`, {
+                const response = await fetch(`${API_URL}/auth/token`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -319,9 +321,9 @@
                     token = data.access_token;
 
                     // Check if user is admin using the token
-                    const userResponse = await fetch(`${API_URL}/user?uid=${data.user_id}`, {
+                    const userResponse = await fetch(`${API_URL}/user/${data.user_id}`, {
                         headers: {
-                            'Authorization': `Bearer ${data.access_token}`
+                            'Authorization': `Bearer ${token}`
                         }
                     });
 
@@ -352,11 +354,16 @@
 
         async function loadUsers() {
             try {
-                const response = await fetch(`${API_URL}/users`, {
+                const response = await fetch(`${API_URL}/user/all`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load users');
+                }
+
                 const users = await response.json();
                 const tableBody = document.getElementById('userTableBody');
                 tableBody.innerHTML = '';
@@ -402,11 +409,16 @@
             const cash = parseFloat(document.getElementById('editCash').value);
 
             try {
-                const response = await fetch(`${API_URL}/user?uid=${currentEditUserId}&name=${username}&cash=${cash}`, {
+                const response = await fetch(`${API_URL}/user/${currentEditUserId}`, {
                     method: 'PATCH',
                     headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: username,
+                        cash: cash
+                    })
                 });
 
                 if (!response.ok) {
@@ -426,7 +438,7 @@
             }
 
             try {
-                const response = await fetch(`${API_URL}/user?uid=${userId}`, {
+                const response = await fetch(`${API_URL}/user/${userId}`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -444,13 +456,19 @@
         }
 
         function logout() {
+            // Close all websockets
+            Object.values(deviceWebsockets).forEach(ws => {
+                ws.time.close();
+                ws.status.close();
+            });
+            deviceWebsockets = {};
+
             token = '';
             document.getElementById('loginForm').style.display = 'block';
             document.getElementById('dashboard').style.display = 'none';
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
             document.getElementById('errorMessage').style.display = 'none';
-            location.reload();
         }
 
         function openCreateModal() {
@@ -506,7 +524,7 @@
 
         async function loadDevices() {
             try {
-                const response = await fetch(`${API_URL}/devices`, {
+                const response = await fetch(`${API_URL}/device/all`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -521,84 +539,168 @@
                 deviceGrid.innerHTML = '';
 
                 devices.forEach(device => {
-                    const deviceCard = createDeviceCard(device);
-                    deviceGrid.appendChild(deviceCard);
+                    deviceGrid.appendChild(createDeviceCard(device));
                 });
+
+                // Initialize websockets after loading devices
+                initializeDeviceWebsockets(devices);
             } catch (error) {
                 console.error('Error loading devices:', error);
             }
         }
 
         function createDeviceCard(device) {
-            const div = document.createElement('div');
-            div.className = 'device-card';
+            const card = document.createElement('div');
+            card.className = 'device-card';
+            card.setAttribute('data-device-id', device.id);
 
-            const isInUse = device.user_id !== null && device.time_left > 0;
-            const statusClass = isInUse ? 'status-in-use' : 'status-available';
-            const statusText = isInUse ? 'In Use' : 'Available';
+            const timeLeft = device.time_left ? Math.round(device.time_left) : 0;
+            const status = device.user_id ? 'In Use' : 'Available';
+            const statusClass = device.user_id ? 'status-in-use' : 'status-available';
+            const userIdDisplay = device.user_id ? `User ID: ${device.user_id}` : '';
 
-            let timeLeftText = '';
-            if (isInUse && device.time_left) {
-                const minutes = Math.floor(device.time_left / 60);
-                const seconds = Math.floor(device.time_left % 60);
-                timeLeftText = `${minutes}m ${seconds}s`;
-            }
-
-            div.innerHTML = `
-                <h3>
-                    ${device.name}
-                    <span class="device-type">${device.type}</span>
-                </h3>
-                <div class="device-status ${statusClass}">
-                    ${statusText}
-                </div>
-                ${isInUse ? `
-                    <div class="device-info">
-                        Device ID: ${device.id}<br>
-                        User ID: ${device.user_id}<br>
-                        Time Left: ${timeLeftText}
-                        <button onclick="stopDevice(${device.id})" class="button stop-button">Stop Device</button>
-                    </div>
-                ` : `
-                    <div class="device-info">
-                        Device ID: ${device.id}
-                    </div>
-                `}
+            card.innerHTML = `
+                <h3>${device.name}<span class="device-type">${device.type}</span></h3>
+                <p>Cost: $${device.hourly_cost}/hour</p>
+                <p class="device-status ${statusClass}">${status}</p>
+                <p class="time-left">Time Left: ${timeLeft} seconds</p>
+                <p class="user-info" ${device.user_id ? '' : 'style="display: none"'}>
+                    ${userIdDisplay}
+                </p>
+                <button onclick="stopDevice(${device.id})" class="button stop-button" 
+                        ${device.user_id ? '' : 'style="display: none"'}>
+                    Stop Device
+                </button>
             `;
 
-            return div;
+            return card;
+        }
+
+        function initializeDeviceWebsockets(devices) {
+            // Close existing websockets
+            Object.values(deviceWebsockets).forEach(ws => ws.close());
+            deviceWebsockets = {};
+
+            devices.forEach(device => {
+                // Time left websocket
+                const timeWs = new WebSocket(`${WS_URL}/device/ws/timeleft/${device.id}`);
+                timeWs.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    logWebSocketMessage(data); // Add logging
+                    updateDeviceTimeLeft(data);
+                };
+
+                deviceWebsockets[device.id] = {
+                    time: timeWs
+                };
+            });
         }
 
         function startDeviceUpdates() {
-            setInterval(loadDevices, 1000);
+            // This function is now handled by initializeDeviceWebsockets
         }
 
         async function stopDevice(deviceId) {
-            if (!confirm('Are you sure you want to stop this device?')) {
-                return;
-            }
-
             try {
-                const idempotencyKey = `stop-device-${deviceId}-${Date.now()}`;
-                const response = await fetch(`${API_URL}/device/stop?device_id=${deviceId}`, {
+                const response = await fetch(`${API_URL}/device/stop/${deviceId}`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'X-Idempotency-Key': idempotencyKey
+                        'Authorization': `Bearer ${token}`
                     }
                 });
 
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to stop device');
+                    throw new Error('Failed to stop device');
                 }
 
-                // Refresh the devices display
                 loadDevices();
             } catch (error) {
                 console.error('Error stopping device:', error);
-                alert(error.message);
             }
+        }
+
+        function updateDeviceStatus(data) {
+            const deviceCard = document.querySelector(`.device-card[data-device-id="${data.device_id}"]`);
+            if (deviceCard) {
+                const statusElement = deviceCard.querySelector('.device-status');
+                const timeLeftElement = deviceCard.querySelector('.time-left');
+                const userInfoElement = deviceCard.querySelector('.user-info');
+                const stopButton = deviceCard.querySelector('.stop-button');
+
+                if (data.running) {
+                    statusElement.textContent = 'In Use';
+                    statusElement.className = 'device-status status-in-use';
+                    if (!userInfoElement) {
+                        deviceCard.insertBefore(
+                            createElement('p', `User ID: ${data.user_id}`, { className: 'user-info' }),
+                            stopButton || null
+                        );
+                    }
+                    if (!stopButton) {
+                        deviceCard.appendChild(
+                            createElement('button', 'Stop Device', {
+                                onclick: () => stopDevice(data.device_id),
+                                className: 'button stop-button'
+                            })
+                        );
+                    }
+                } else {
+                    statusElement.textContent = 'Available';
+                    statusElement.className = 'device-status status-available';
+                    if (userInfoElement) userInfoElement.remove();
+                    if (stopButton) stopButton.remove();
+                }
+            }
+        }
+
+        function updateDeviceTimeLeft(data) {
+            const deviceCard = document.querySelector(`[data-device-id="${data.device_id}"]`);
+            if (!deviceCard) return;
+
+            const timeLeftElement = deviceCard.querySelector('.time-left');
+            const statusElement = deviceCard.querySelector('.device-status');
+            const userInfoElement = deviceCard.querySelector('.user-info');
+            const stopButton = deviceCard.querySelector('.stop-button');
+
+            // Update time left
+            if (timeLeftElement) {
+                timeLeftElement.textContent = `Time Left: ${Math.round(data.time_left)} seconds`;
+            }
+
+            // Update status and user info
+            if (data.time_left <= 0 || data.status === "idle") {
+                statusElement.textContent = 'Available';
+                statusElement.className = 'device-status status-available';
+                userInfoElement.style.display = 'none';
+                stopButton.style.display = 'none';
+            } else {
+                statusElement.textContent = 'In Use';
+                statusElement.className = 'device-status status-in-use';
+                userInfoElement.style.display = 'block';
+                stopButton.style.display = 'block';
+                // Only update user info if we have a valid user_id
+                if (data.user_id !== null && data.user_id !== undefined) {
+                    userInfoElement.textContent = `User ID: ${data.user_id}`;
+                }
+            }
+        }
+
+        function createElement(tag, text, attributes = {}) {
+            const element = document.createElement(tag);
+            element.textContent = text;
+            Object.entries(attributes).forEach(([key, value]) => {
+                if (typeof value === 'function') {
+                    element[key] = value;
+                } else {
+                    element.setAttribute(key, value);
+                }
+            });
+            return element;
+        }
+
+        // Add this function to help with debugging
+        function logWebSocketMessage(data) {
+            console.log('WebSocket message received:', data);
         }
     </script>
 </body>

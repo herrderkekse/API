@@ -215,6 +215,8 @@
         let token = '';
         let currentUser = null;
         const API_URL = 'http://localhost:8000';
+        let deviceWebsockets = {};
+        const WS_URL = 'ws://localhost:8000';
 
         async function login() {
             const username = document.getElementById('username').value;
@@ -227,7 +229,7 @@
                 formData.append('username', username);
                 formData.append('password', password);
 
-                const response = await fetch(`${API_URL}/token`, {
+                const response = await fetch(`${API_URL}/auth/token`, {  // Updated endpoint
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -241,7 +243,7 @@
                     token = data.access_token;
 
                     // Get user data using the token
-                    const userResponse = await fetch(`${API_URL}/user?uid=${data.user_id}`, {
+                    const userResponse = await fetch(`${API_URL}/user/${data.user_id}`, {  // Updated endpoint
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
@@ -280,7 +282,7 @@
 
         async function loadDevices() {
             try {
-                const response = await fetch(`${API_URL}/devices`, {
+                const response = await fetch(`${API_URL}/device/all`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -298,6 +300,9 @@
                     const deviceCard = createDeviceCard(device);
                     deviceList.appendChild(deviceCard);
                 });
+
+                // Initialize WebSocket connections for each device
+                initializeDeviceWebsockets(devices);
             } catch (error) {
                 console.error('Error loading devices:', error);
             }
@@ -306,6 +311,7 @@
         function createDeviceCard(device) {
             const div = document.createElement('div');
             div.className = `device-card ${device.user_id === currentUser.uid ? 'in-use' : ''}`;
+            div.setAttribute('data-device-id', device.id);
 
             const isAvailable = !device.user_id;
             const isOwnDevice = device.user_id === currentUser.uid;
@@ -316,7 +322,7 @@
                 <h3>${device.name}</h3>
                 <div class="device-type">${device.type}</div>
                 <div class="device-status">Status: ${status}</div>
-                ${isOwnDevice ? `<div class="device-timer">Time Left: ${timeLeft}</div>` : ''}
+                <div class="device-timer" ${isOwnDevice ? '' : 'style="display: none"'}>Time Left: ${timeLeft}</div>
                 
                 <div class="device-controls">
                     ${isAvailable ? `
@@ -330,20 +336,70 @@
                             <button onclick="startDevice(${device.id})">Start Device</button>
                         </div>
                     ` : ''}
-                    ${isOwnDevice ? `
-                        <div class="form-group">
-                            <select id="add-time-${device.id}" class="duration-select">
-                                <option value="15">15 minutes</option>
-                                <option value="30">30 minutes</option>
-                                <option value="60">60 minutes</option>
-                            </select>
-                            <button onclick="addTime(${device.id})">Add Time</button>
-                        </div>
-                    ` : ''}
                 </div>
             `;
 
             return div;
+        }
+
+        function initializeDeviceWebsockets(devices) {
+            // Close existing websockets
+            Object.values(deviceWebsockets).forEach(ws => ws.close());
+            deviceWebsockets = {};
+
+            devices.forEach(device => {
+                // Time left websocket
+                const timeWs = new WebSocket(`${WS_URL}/device/ws/timeleft/${device.id}`);
+                timeWs.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    updateDeviceTimeLeft(data);
+                };
+
+                deviceWebsockets[device.id] = {
+                    time: timeWs
+                };
+            });
+        }
+
+        function updateDeviceTimeLeft(data) {
+            const deviceCard = document.querySelector(`[data-device-id="${data.device_id}"]`);
+            if (!deviceCard) return;
+
+            const statusElement = deviceCard.querySelector('.device-status');
+            const timerElement = deviceCard.querySelector('.device-timer');
+            const controlsElement = deviceCard.querySelector('.device-controls');
+
+            const isOwnDevice = data.user_id === currentUser.uid;
+            const isAvailable = data.status === "idle" || data.time_left <= 0;
+
+            // Update status
+            statusElement.textContent = `Status: ${isOwnDevice ? 'Your Device' : (isAvailable ? 'Available' : 'In Use')}`;
+
+            // Update timer
+            if (timerElement) {
+                timerElement.style.display = isOwnDevice ? 'block' : 'none';
+                if (isOwnDevice) {
+                    timerElement.textContent = `Time Left: ${Math.round(data.time_left / 60)} minutes`;
+                }
+            }
+
+            // Update controls visibility
+            if (controlsElement) {
+                controlsElement.innerHTML = isAvailable ? `
+                    <div class="form-group">
+                        <select id="duration-${data.device_id}" class="duration-select">
+                            <option value="30">30 minutes</option>
+                            <option value="60">60 minutes</option>
+                            <option value="90">90 minutes</option>
+                            <option value="120">120 minutes</option>
+                        </select>
+                        <button onclick="startDevice(${data.device_id})">Start Device</button>
+                    </div>
+                ` : '';
+            }
+
+            // Update card class
+            deviceCard.className = `device-card ${isOwnDevice ? 'in-use' : ''}`;
         }
 
         async function updateUsername() {
@@ -416,15 +472,19 @@
 
         async function startDevice(deviceId) {
             try {
-                const duration = document.getElementById(`duration-${deviceId}`).value;
-                const idempotencyKey = `start-device-${deviceId}-${currentUser.uid}-${Date.now()}`;
+                const durationSelect = document.getElementById(`duration-${deviceId}`);
+                const duration = parseInt(durationSelect.value);
 
-                const response = await fetch(`${API_URL}/device/start?device_id=${deviceId}&user_id=${currentUser.uid}&duration_minutes=${duration}`, {
+                const response = await fetch(`${API_URL}/device/start/${deviceId}`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
-                        'X-Idempotency-Key': idempotencyKey
-                    }
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: currentUser.uid,
+                        duration_minutes: duration
+                    })
                 });
 
                 if (!response.ok) {
@@ -432,43 +492,21 @@
                     throw new Error(error.detail || 'Failed to start device');
                 }
 
-                await response.json(); // Wait for the response to be fully read
-
-                // Add a small delay before refreshing the devices
-                setTimeout(() => {
-                    loadDevices();
-                }, 500);
-            } catch (error) {
-                console.error('Error starting device:', error);
-                // Only show alert for actual errors, not network-related updates
-                if (!error.message.includes('NetworkError')) {
-                    alert(error.message);
-                }
-            }
-        }
-
-        async function addTime(deviceId) {
-            try {
-                const additionalTime = document.getElementById(`add-time-${deviceId}`).value;
-                const response = await fetch(`${API_URL}/device/start?device_id=${deviceId}&user_id=${currentUser.uid}&duration_minutes=${additionalTime}`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to add time');
-                }
-
                 // Refresh devices to show updated status
                 loadDevices();
             } catch (error) {
-                console.error('Error adding time:', error);
+                console.error('Error starting device:', error);
                 alert(error.message);
             }
         }
+
+        // Update the interval to use WebSocket data instead
+        clearInterval(deviceUpdateInterval); // Clear any existing interval
+        const deviceUpdateInterval = setInterval(() => {
+            if (document.getElementById('dashboard').style.display === 'block') {
+                updateUserInfo();
+            }
+        }, 5000);
     </script>
 </body>
 

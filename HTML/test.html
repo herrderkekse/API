@@ -57,22 +57,23 @@
     <!-- Authentication Section -->
     <div class="section">
         <h2>Authentication</h2>
-        <div id="loginForm">
-            <div class="form-group">
-                <label>Username:</label>
-                <input type="text" id="username">
-            </div>
-            <div class="form-group">
-                <label>Password:</label>
-                <input type="password" id="password">
-            </div>
-            <button onclick="login()">Login</button>
-            <div id="loginResponse" class="response"></div>
+
+        <!-- Login -->
+        <h3>Login</h3>
+        <div class="form-group">
+            <label>Username:</label>
+            <input type="text" id="username">
         </div>
-        <div>
-            <strong>Current Token:</strong>
-            <div id="currentToken" style="word-break: break-all;"></div>
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="password">
         </div>
+        <button onclick="login()">Login</button>
+        <div id="loginResponse" class="response"></div>
+
+        <!-- Current Token -->
+        <h3>Current Token</h3>
+        <div id="currentToken" class="token-display"></div>
     </div>
 
     <!-- User Management Section -->
@@ -220,25 +221,23 @@
         // Helper function for API calls
         async function apiCall(endpoint, options = {}) {
             try {
-                if (token && !endpoint.includes('/token')) {
+                if (token && !endpoint.includes('/auth/token')) {
                     options.headers = {
                         ...options.headers,
                         'Authorization': `Bearer ${token}`
                     };
                 }
-                // Add idempotency key for POST/PATCH/PUT methods
-                if (['POST', 'PATCH', 'PUT'].includes(options.method)) {
-                    const timestamp = Date.now();
-                    options.headers = {
-                        ...options.headers,
-                        'X-Idempotency-Key': `${endpoint}-${timestamp}`
-                    };
-                }
+
                 const response = await fetch(`${API_URL}${endpoint}`, options);
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || 'API call failed');
+
+                if (!response.ok) {
+                    throw new Error(data.detail || JSON.stringify(data) || 'API call failed');
+                }
+
                 return data;
             } catch (error) {
+                console.error('API call error:', error);
                 throw error;
             }
         }
@@ -250,7 +249,7 @@
                 formData.append('username', document.getElementById('username').value);
                 formData.append('password', document.getElementById('password').value);
 
-                const data = await apiCall('/token', {
+                const data = await apiCall('/auth/token', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -292,7 +291,7 @@
 
         async function getAllUsers() {
             try {
-                const data = await apiCall('/users');
+                const data = await apiCall('/user/all');
                 displayResponse('getAllUsersResponse', data);
             } catch (error) {
                 displayResponse('getAllUsersResponse', { error: error.message }, true);
@@ -302,7 +301,7 @@
         async function getUser() {
             try {
                 const userId = document.getElementById('getUserId').value;
-                const data = await apiCall(`/user?uid=${userId}`);
+                const data = await apiCall(`/user/${userId}`);
                 displayResponse('getUserResponse', data);
             } catch (error) {
                 displayResponse('getUserResponse', { error: error.message }, true);
@@ -316,11 +315,17 @@
                 const cash = document.getElementById('updateUserCash').value;
                 const idempotencyKey = `update-user-${userId}-${Date.now()}`;
 
-                const data = await apiCall(`/user?uid=${userId}&name=${name}&cash=${cash}`, {
+                const updateData = {};
+                if (name) updateData.name = name;
+                if (cash !== '') updateData.cash = parseFloat(cash);
+
+                const data = await apiCall(`/user/${userId}`, {
                     method: 'PATCH',
                     headers: {
+                        'Content-Type': 'application/json',
                         'X-Idempotency-Key': idempotencyKey
-                    }
+                    },
+                    body: JSON.stringify(updateData)
                 });
                 displayResponse('updateUserResponse', data);
             } catch (error) {
@@ -331,7 +336,7 @@
         async function deleteUser() {
             try {
                 const userId = document.getElementById('deleteUserId').value;
-                const data = await apiCall(`/user?uid=${userId}`, {
+                const data = await apiCall(`/user/${userId}`, {
                     method: 'DELETE'
                 });
                 displayResponse('deleteUserResponse', data);
@@ -343,44 +348,79 @@
         // Device Management
         async function getAllDevices() {
             try {
-                const response = await fetch(`${API_URL}/devices`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
+                const data = await apiCall('/device/all', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
                 displayResponse('getAllDevicesResponse', data);
             } catch (error) {
-                console.error('Error:', error);
-                displayResponse('getAllDevicesResponse', { error: error.message }, true);
+                console.error('Error fetching devices:', error);
+                displayResponse('getAllDevicesResponse', {
+                    error: error.message || 'Failed to fetch devices'
+                }, true);
             }
         }
 
         async function getDevice() {
             try {
                 const deviceId = document.getElementById('getDeviceId').value;
-                const data = await apiCall(`/device?device_id=${deviceId}`);
+                if (!deviceId || deviceId < 1 || deviceId > 5) {
+                    throw new Error('Device ID must be between 1 and 5');
+                }
+
+                const data = await apiCall(`/device/${deviceId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
                 displayResponse('getDeviceResponse', data);
             } catch (error) {
-                displayResponse('getDeviceResponse', { error: error.message }, true);
+                console.error('Error fetching device:', error);
+                displayResponse('getDeviceResponse', {
+                    error: error.message || 'Failed to fetch device'
+                }, true);
             }
         }
 
         async function startDevice() {
             try {
                 const deviceId = document.getElementById('startDeviceId').value;
-                const userId = document.getElementById('startDeviceUserId').value;
-                const duration = document.getElementById('startDeviceDuration').value;
+                const userId = parseInt(document.getElementById('startDeviceUserId').value);
+                const duration = parseInt(document.getElementById('startDeviceDuration').value);
+
+                // Validate inputs
+                if (!deviceId || deviceId < 1 || deviceId > 5) {
+                    throw new Error('Device ID must be between 1 and 5');
+                }
+                if (!userId || userId <= 0) {
+                    throw new Error('Invalid user ID');
+                }
+                if (!duration || duration <= 0) {
+                    throw new Error('Duration must be positive');
+                }
+
                 const idempotencyKey = `start-device-${deviceId}-${userId}-${Date.now()}`;
 
-                const data = await apiCall(`/device/start?device_id=${deviceId}&user_id=${userId}&duration_minutes=${duration}`, {
+                const data = await apiCall(`/device/start/${deviceId}`, {
                     method: 'POST',
                     headers: {
+                        'Content-Type': 'application/json',
                         'X-Idempotency-Key': idempotencyKey
-                    }
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        duration_minutes: duration
+                    })
                 });
                 displayResponse('startDeviceResponse', data);
             } catch (error) {
-                displayResponse('startDeviceResponse', { error: error.message }, true);
+                console.error('Error starting device:', error);
+                displayResponse('startDeviceResponse', {
+                    error: error.message || 'Failed to start device'
+                }, true);
             }
         }
 
@@ -389,7 +429,7 @@
                 const deviceId = document.getElementById('stopDeviceId').value;
                 const idempotencyKey = `stop-device-${deviceId}-${Date.now()}`;
 
-                const data = await apiCall(`/device/stop?device_id=${deviceId}`, {
+                const data = await apiCall(`/device/stop/${deviceId}`, {
                     method: 'POST',
                     headers: {
                         'X-Idempotency-Key': idempotencyKey
@@ -403,7 +443,7 @@
 
         function connectDeviceStatusWS() {
             const deviceId = document.getElementById('wsDeviceId').value;
-            const wsUrl = `ws://localhost:8000/device/status?device_id=${deviceId}`;
+            const wsUrl = `ws://localhost:8000/device/ws/status/${deviceId}`;
 
             if (deviceStatusSocket) {
                 deviceStatusSocket.close();
@@ -454,7 +494,7 @@
 
         function connectTimeLeftWS() {
             const deviceId = document.getElementById('wsTimeLeftDeviceId').value;
-            const wsUrl = `ws://localhost:8000/timeleft?device_id=${deviceId}`;
+            const wsUrl = `ws://localhost:8000/device/ws/timeleft/${deviceId}`;
 
             if (timeLeftSocket) {
                 timeLeftSocket.close();
