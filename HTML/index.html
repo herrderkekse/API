@@ -293,6 +293,8 @@
                 }
 
                 const devices = await response.json();
+                console.log('Loaded devices:', devices); // Add this debug line
+
                 const deviceList = document.getElementById('deviceList');
                 deviceList.innerHTML = '';
 
@@ -454,7 +456,8 @@
 
         async function updateUserInfo() {
             try {
-                const response = await fetch(`${API_URL}/user?uid=${currentUser.uid}`, {
+                // Change from query parameter to path parameter
+                const response = await fetch(`${API_URL}/user/${currentUser.uid}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
