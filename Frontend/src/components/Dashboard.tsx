@@ -423,12 +423,6 @@ export function Dashboard() {
           <h1>Waschsalon Admin Panel</h1>
           <div>
             <Button
-              variant="primary"
-              onClick={() => setCreateModal({ ...createModal, isOpen: true })}
-            >
-              Create User
-            </Button>
-            <Button
               variant="secondary"
               onClick={handleLogout}
               className="ml-2"
@@ -460,6 +454,31 @@ export function Dashboard() {
           onEdit={setEditingUser}
           onDelete={handleDeleteUser}
           onRefresh={loadUsers}
+          onCreateUser={async (userData) => {
+            try {
+              const response = await fetch(`${API_URL}/user`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  name: userData.username,
+                  password: userData.password,
+                  is_admin: userData.isAdmin
+                })
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to create user');
+              }
+
+              await loadUsers();
+            } catch (error) {
+              throw error instanceof Error ? error : new Error('Failed to create user');
+            }
+          }}
         />
 
         <CreateUserModal

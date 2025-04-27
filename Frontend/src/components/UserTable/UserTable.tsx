@@ -15,10 +15,25 @@ interface UserTableProps {
   onEdit: (user: User) => void;
   onDelete: (userId: number) => void;
   onRefresh: () => Promise<void>;
+  onCreateUser: (userData: { username: string; password: string; isAdmin: boolean }) => Promise<void>;
 }
 
-export function UserTable({ users, onEdit, onDelete, onRefresh }: UserTableProps) {
+interface CreateUserModalState {
+  isOpen: boolean;
+  username: string;
+  password: string;
+  isAdmin: boolean;
+}
+
+export function UserTable({ users, onEdit, onDelete, onRefresh, onCreateUser }: UserTableProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [createModal, setCreateModal] = useState<CreateUserModalState>({
+    isOpen: false,
+    username: '',
+    password: '',
+    isAdmin: false
+  });
+  const [error, setError] = useState<string | null>(null);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -29,9 +44,38 @@ export function UserTable({ users, onEdit, onDelete, onRefresh }: UserTableProps
     }
   };
 
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await onCreateUser({
+        username: createModal.username,
+        password: createModal.password,
+        isAdmin: createModal.isAdmin
+      });
+      setCreateModal({
+        isOpen: false,
+        username: '',
+        password: '',
+        isAdmin: false
+      });
+      setError(null);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create user');
+    }
+  };
+
   return (
     <div className="user-table-container">
-      <h2>User Management</h2>
+      <div className="user-table-header">
+        <h2>User Management</h2>
+        <Button
+          variant="primary"
+          onClick={() => setCreateModal({ ...createModal, isOpen: true })}
+        >
+          Create User
+        </Button>
+      </div>
+
       <table className="user-table">
         <thead>
           <tr>
@@ -83,6 +127,61 @@ export function UserTable({ users, onEdit, onDelete, onRefresh }: UserTableProps
           ))}
         </tbody>
       </table>
+
+      {/* Create User Modal */}
+      <div className={`modal ${createModal.isOpen ? 'show' : ''}`}>
+        <div className="modal-content">
+          <h2>Create New User</h2>
+          <form onSubmit={handleCreateSubmit}>
+            <div className="form-group">
+              <label htmlFor="username">Username:</label>
+              <input
+                type="text"
+                id="username"
+                value={createModal.username}
+                onChange={(e) => setCreateModal({ ...createModal, username: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="password">Password:</label>
+              <input
+                type="password"
+                id="password"
+                value={createModal.password}
+                onChange={(e) => setCreateModal({ ...createModal, password: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={createModal.isAdmin}
+                  onChange={(e) => setCreateModal({ ...createModal, isAdmin: e.target.checked })}
+                />
+                Admin User
+              </label>
+            </div>
+            {error && <div className="error-message">{error}</div>}
+            <div className="button-group">
+              <Button
+                type="submit"
+                variant="success"
+              >
+                Create
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setCreateModal({ ...createModal, isOpen: false })}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
