@@ -2,8 +2,38 @@ import asyncio
 from fastapi import APIRouter, Depends, WebSocket, HTTPException, status
 from sqlalchemy import select
 from datetime import datetime, timezone, timedelta
-from typing import List
+from typing import List, Dict, Set
 from pydantic import BaseModel
+
+# Store WebSocket connections
+time_ws_connections: Dict[int, Set[WebSocket]] = {}
+status_ws_connections: Dict[int, Set[WebSocket]] = {}
+
+async def broadcast_device_update(device_id: int, data: dict):
+    """Broadcast update to all WebSocket clients for a specific device"""
+    if device_id in time_ws_connections:
+        dead_connections = set()
+        for websocket in time_ws_connections[device_id]:
+            try:
+                await websocket.send_json(data)
+            except RuntimeError:  # Connection already closed
+                dead_connections.add(websocket)
+        
+        # Clean up dead connections
+        time_ws_connections[device_id] -= dead_connections
+
+async def broadcast_status_update(device_id: int, data: dict):
+    """Broadcast status update to all status WebSocket clients for a specific device"""
+    if device_id in status_ws_connections:
+        dead_connections = set()
+        for websocket in status_ws_connections[device_id]:
+            try:
+                await websocket.send_json(data)
+            except RuntimeError:  # Connection already closed
+                dead_connections.add(websocket)
+        
+        # Clean up dead connections
+        status_ws_connections[device_id] -= dead_connections
 
 from ...database.session import AsyncSessionLocal
 from ...models.device import Device
@@ -79,38 +109,48 @@ async def time_ws_endpoint(websocket: WebSocket, device_id: int):
         await websocket.close(code=1003, reason="Invalid device ID")
         return
 
-    while True:
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(select(Device).where(Device.id == device_id))
-            device = result.scalars().first()
-            
-            response_data = {
-                "device_id": device_id,
-                "time_left": 0,
-                "status": "idle",
-                "user_id": None
-            }
-            
-            if device and device.end_time:
-                # Make sure end_time is timezone-aware
-                if device.end_time.tzinfo is None:
-                    device.end_time = device.end_time.replace(tzinfo=timezone.utc)
+    # Add connection to tracking
+    if device_id not in time_ws_connections:
+        time_ws_connections[device_id] = set()
+    time_ws_connections[device_id].add(websocket)
+
+    try:
+        while True:
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(select(Device).where(Device.id == device_id))
+                device = result.scalars().first()
                 
-                time_left = (device.end_time - datetime.now(timezone.utc)).total_seconds()
-                if time_left <= 0:
-                    # Reset device
-                    device.user_id = None
-                    device.end_time = None
-                    await session.commit()
-                else:
-                    response_data.update({
-                        "time_left": round(time_left),
-                        "status": "running",
-                        "user_id": device.user_id
-                    })
-            
-            await websocket.send_json(response_data)
-        await asyncio.sleep(1)
+                response_data = {
+                    "device_id": device_id,
+                    "time_left": 0,
+                    "status": "idle",
+                    "user_id": None
+                }
+                
+                if device and device.end_time:
+                    if device.end_time.tzinfo is None:
+                        device.end_time = device.end_time.replace(tzinfo=timezone.utc)
+                    
+                    time_left = (device.end_time - datetime.now(timezone.utc)).total_seconds()
+                    if time_left <= 0:
+                        device.user_id = None
+                        device.end_time = None
+                        await session.commit()
+                    else:
+                        response_data.update({
+                            "time_left": round(time_left),
+                            "status": "running",
+                            "user_id": device.user_id
+                        })
+                
+                await websocket.send_json(response_data)
+            await asyncio.sleep(1)
+    finally:
+        # Remove connection when client disconnects
+        if device_id in time_ws_connections:
+            time_ws_connections[device_id].remove(websocket)
+            if not time_ws_connections[device_id]:
+                del time_ws_connections[device_id]
 
 @router.websocket("/ws/status/{device_id}")
 async def device_status_ws_endpoint(websocket: WebSocket, device_id: int):
@@ -119,41 +159,53 @@ async def device_status_ws_endpoint(websocket: WebSocket, device_id: int):
         await websocket.close(code=1003, reason="Invalid device ID")
         return
 
-    last_status = None
-    while True:
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(select(Device).where(Device.id == device_id))
-            device = result.scalars().first()
-            
-            if not device or not device.end_time:
-                current_status = False
-            else:
-                # Make sure end_time is timezone-aware
-                if device.end_time.tzinfo is None:
-                    device.end_time = device.end_time.replace(tzinfo=timezone.utc)
+    # Add connection to tracking
+    if device_id not in status_ws_connections:
+        status_ws_connections[device_id] = set()
+    status_ws_connections[device_id].add(websocket)
+
+    try:
+        last_status = None
+        while True:
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(select(Device).where(Device.id == device_id))
+                device = result.scalars().first()
                 
-                time_left = (device.end_time - datetime.now(timezone.utc)).total_seconds()
-                if time_left <= 0:
-                    # Reset device
-                    device.user_id = None
-                    device.end_time = None
-                    await session.commit()
+                if not device or not device.end_time:
                     current_status = False
                 else:
-                    current_status = True
-            
-            # Only send update if status has changed
-            if current_status != last_status:
-                response = {
-                    "device_id": device_id,
-                    "running": current_status
-                }
-                if current_status:
-                    response["end_time"] = device.end_time.isoformat()
-                await websocket.send_json(response)
-                last_status = current_status
+                    # Make sure end_time is timezone-aware
+                    if device.end_time.tzinfo is None:
+                        device.end_time = device.end_time.replace(tzinfo=timezone.utc)
                     
-        await asyncio.sleep(1)
+                    time_left = (device.end_time - datetime.now(timezone.utc)).total_seconds()
+                    if time_left <= 0:
+                        # Reset device
+                        device.user_id = None
+                        device.end_time = None
+                        await session.commit()
+                        current_status = False
+                    else:
+                        current_status = True
+                
+                # Only send update if status has changed
+                if current_status != last_status:
+                    response = {
+                        "device_id": device_id,
+                        "running": current_status
+                    }
+                    if current_status:
+                        response["end_time"] = device.end_time.isoformat()
+                    await websocket.send_json(response)
+                    last_status = current_status
+                        
+            await asyncio.sleep(1)
+    finally:
+        # Remove connection when client disconnects
+        if device_id in status_ws_connections:
+            status_ws_connections[device_id].remove(websocket)
+            if not status_ws_connections[device_id]:
+                del status_ws_connections[device_id]
 
 @router.get("/{device_id}", response_model=DeviceResponse)
 async def get_device(
@@ -225,11 +277,28 @@ async def _handle_device_stop(session, device_id):
     device.end_time = None
     await session.commit()
     
-    return {
+    # Create response data
+    response = {
         "message": "Device stopped successfully",
         "device": device._tojson(),
         "refund_amount": refund
     }
+    
+    # Broadcast updates to all connected WebSocket clients
+    await broadcast_device_update(device_id, {
+        "device_id": device_id,
+        "time_left": 0,
+        "status": "idle",
+        "user_id": None
+    })
+
+    # Broadcast status update
+    await broadcast_status_update(device_id, {
+        "device_id": device_id,
+        "running": False
+    })
+    
+    return response
 
 async def _get_user(session, user_id: int) -> User:
     result = await session.execute(select(User).where(User.uid == user_id))
