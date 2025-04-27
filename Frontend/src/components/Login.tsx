@@ -1,10 +1,11 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from './Button/Button';
 
-interface LoginResponse {
-  access_token: string;
-  token_type: string;
-}
+// interface LoginResponse {
+//   access_token: string;
+//   token_type: string;
+// }
 
 export function Login() {
   const navigate = useNavigate();
@@ -78,9 +79,14 @@ export function Login() {
           />
         </div>
         {error && <div className="error">{error}</div>}
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? 'Logging in...' : 'Login'}
-        </button>
+        <Button
+          type="submit"
+          variant="primary"
+          isLoading={isLoading}
+          fullWidth
+        >
+          Login
+        </Button>
       </form>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import './Dashboard.css';
+import { Button } from './Button/Button';
 
 interface User {
   uid: number;
@@ -113,12 +114,13 @@ const DeviceCard = ({
             </div>
 
             {canStop && (
-              <button
+              <Button
+                variant="danger"
+                fullWidth
                 onClick={() => onStopDevice(device.id)}
-                className="button stop-button"
               >
                 Stop Device
-              </button>
+              </Button>
             )}
           </>
         )}
@@ -182,14 +184,19 @@ const CreateUserModal = ({
         </div>
         {error && <div className="error-message">{error}</div>}
         <div className="button-group">
-          <button type="submit" className="button create-button">Create</button>
-          <button
+          <Button
+            type="submit"
+            variant="success"
+          >
+            Create
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
             onClick={onClose}
-            className="button cancel-button"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -237,14 +244,19 @@ const EditUserModal = ({
           </div>
           {error && <div className="error-message">{error}</div>}
           <div className="button-group">
-            <button type="submit" className="button edit-button">Save</button>
-            <button
+            <Button
+              type="submit"
+              variant="primary"
+            >
+              Save
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
               onClick={onClose}
-              className="button cancel-button"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       )}
@@ -476,13 +488,19 @@ export function Dashboard() {
         <div className="header">
           <h1>Waschsalon Admin Panel</h1>
           <div>
-            <button
+            <Button
+              variant="primary"
               onClick={() => setCreateModal({ ...createModal, isOpen: true })}
-              className="button create-button"
             >
               Create User
-            </button>
-            <button onClick={handleLogout} className="logout-btn">Logout</button>
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleLogout}
+              className="ml-2"
+            >
+              Logout
+            </Button>
           </div>
         </div>
 
@@ -522,19 +540,20 @@ export function Dashboard() {
                 <td>{user.is_admin ? 'Yes' : 'No'}</td>
                 <td>{new Date(user.creation_time).toLocaleString()}</td>
                 <td>
-                  <button
+                  <Button
+                    variant="primary"
                     onClick={() => setEditingUser(user)}
-                    className="button edit-button"
                   >
                     Edit
-                  </button>
+                  </Button>
                   {!user.is_admin && (
-                    <button
+                    <Button
+                      variant="danger"
                       onClick={() => handleDeleteUser(user.uid)}
-                      className="button delete-button"
+                      className="ml-2"
                     >
                       Delete
-                    </button>
+                    </Button>
                   )}
                 </td>
               </tr>

@@ -207,7 +207,7 @@
   padding: 2rem;
   border-radius: 12px;
   width: 90%;
-  max-width: 500px;
+  max-width: 400px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -218,7 +218,7 @@
 }
 
 .form-group {
-  margin-bottom: 1.2rem;
+  margin-bottom: 1rem;
 }
 
 .form-group label {
@@ -246,9 +246,8 @@
 
 .button-group {
   display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 2rem;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
 .cancel-button {
@@ -267,4 +266,9 @@
   border-radius: 8px;
   margin-top: 1rem;
   font-size: 0.9rem;
+}
+
+/* Add these utility classes */
+.ml-2 {
+  margin-left: 0.5rem;
 }
