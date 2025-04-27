@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import './Dashboard.css';
 import { Button } from './Button/Button';
+import { DeviceCard } from './DeviceCard/DeviceCard';
 
 interface User {
   uid: number;
@@ -35,99 +36,6 @@ interface EditUserModal {
   newIsAdmin?: boolean;
 }
 
-const formatTimeLeft = (seconds: number): string => {
-  if (seconds <= 0) return 'Not running';
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-
-  const parts = [];
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  parts.push(`${remainingSeconds}s`);
-
-  return parts.join(' ');
-};
-
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(amount);
-};
-
-const DeviceCard = ({
-  device,
-  onStopDevice,
-  currentUser,
-  users
-}: {
-  device: Device;
-  onStopDevice: (id: number) => void;
-  currentUser: User;
-  users: User[];
-}) => {
-  const isRunning = device.time_left && device.time_left > 0;
-  const isAdmin = currentUser.is_admin;
-  const deviceUser = users.find(u => u.uid === device.user_id);
-  const canStop = isAdmin || currentUser.uid === device.user_id;
-
-  return (
-    <div className="device-card">
-      <div className="device-header">
-        <h3>
-          {device.name}
-          <span className="device-type">{device.type}</span>
-        </h3>
-      </div>
-
-      <div className="device-info">
-        <div className="info-row">
-          <span className="label">Status</span>
-          <span className={isRunning ? 'status-running' : 'status-available'}>
-            {isRunning ? 'Running' : 'Available'}
-          </span>
-        </div>
-
-        <div className="info-row">
-          <span className="label">Cost</span>
-          <span>{formatCurrency(device.hourly_cost)}/hour</span>
-        </div>
-
-        {isRunning && (
-          <>
-            <div className="info-row">
-              <span className="label">Time Left</span>
-              <span>{formatTimeLeft(device.time_left || 0)}</span>
-            </div>
-
-            <div className="info-row">
-              <span className="label">End Time</span>
-              <span>
-                {device.end_time ? new Date(device.end_time).toLocaleString() : 'N/A'}
-              </span>
-            </div>
-
-            <div className="info-row">
-              <span className="label">User</span>
-              <span>{deviceUser ? deviceUser.name : `ID: ${device.user_id}`}</span>
-            </div>
-
-            {canStop && (
-              <Button
-                variant="danger"
-                fullWidth
-                onClick={() => onStopDevice(device.id)}
-              >
-                Stop Device
-              </Button>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
 
 const CreateUserModal = ({
   isOpen,
@@ -373,9 +281,9 @@ export function Dashboard() {
         }
       });
       if (!response.ok) throw new Error('Failed to stop device');
-      // Remove loadDevices() call as WebSocket will handle the update
     } catch (error) {
       console.error('Error stopping device:', error);
+      throw error; // Re-throw to handle in the DeviceCard component
     }
   };
 
