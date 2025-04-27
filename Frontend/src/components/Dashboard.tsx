@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import './Dashboard.css';
 import { Button } from './Button/Button';
 import { DeviceCard } from './DeviceCard/DeviceCard';
+import { UserTable } from './UserTable/UserTable';
 
 interface User {
   uid: number;
@@ -210,6 +211,7 @@ export function Dashboard() {
       setUsers(data);
     } catch (error) {
       console.error('Error loading users:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load users');
     }
   };
 
@@ -428,46 +430,12 @@ export function Dashboard() {
         </div>
 
         <h2>User Management</h2>
-        <table className="user-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Username</th>
-              <th>Cash</th>
-              <th>Admin</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(user => (
-              <tr key={user.uid}>
-                <td>{user.uid}</td>
-                <td>{user.name}</td>
-                <td>{user.cash.toFixed(2)}</td>
-                <td>{user.is_admin ? 'Yes' : 'No'}</td>
-                <td>{new Date(user.creation_time).toLocaleString()}</td>
-                <td>
-                  <Button
-                    variant="primary"
-                    onClick={() => setEditingUser(user)}
-                  >
-                    Edit
-                  </Button>
-                  {!user.is_admin && (
-                    <Button
-                      variant="danger"
-                      onClick={() => handleDeleteUser(user.uid)}
-                      className="ml-2"
-                    >
-                      Delete
-                    </Button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <UserTable
+          users={users}
+          onEdit={setEditingUser}
+          onDelete={handleDeleteUser}
+          onRefresh={loadUsers}
+        />
 
         <CreateUserModal
           isOpen={createModal.isOpen}

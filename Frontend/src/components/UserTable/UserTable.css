@@ -1,0 +1,47 @@
+.user-table-container {
+  margin-top: 2rem;
+}
+
+.user-table-container h2 {
+  margin-bottom: 1rem;
+}
+
+.user-table {
+  width: 100%;
+  border-radius: 12px;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.user-table th,
+.user-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.user-table th {
+  background-color: #f8f9fa;
+  font-weight: 500;
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.user-table td {
+  font-size: 0.9rem;
+}
+
+.actions-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.refresh-button {
+  margin-left: auto;
+}
+
+.ml-2 {
+  margin-left: 0.5rem;
+}
