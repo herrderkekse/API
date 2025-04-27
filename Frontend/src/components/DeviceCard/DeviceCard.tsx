@@ -26,31 +26,17 @@ interface DeviceCardProps {
   onStopDevice: (id: number) => Promise<void>;
   currentUser: User;
   users: User[];
+  onStartDevice: (id: number, duration: number) => Promise<void>;
 }
 
-const formatTimeLeft = (seconds: number): string => {
-  if (seconds <= 0) return 'Not running';
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
 
-  const parts = [];
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  parts.push(`${remainingSeconds}s`);
 
-  return parts.join(' ');
-};
-
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(amount);
-};
-
-export const DeviceCard = ({ device, onStopDevice, currentUser, users }: DeviceCardProps) => {
+export const DeviceCard = ({ device, onStopDevice, onStartDevice, currentUser, users }: DeviceCardProps) => {
   const [isStopping, setIsStopping] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [hours, setHours] = useState(0);
+  const [minutes, setMinutes] = useState(30);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const isRunning = device.time_left && device.time_left > 0;
   const isAdmin = currentUser.is_admin;
@@ -66,73 +52,195 @@ export const DeviceCard = ({ device, onStopDevice, currentUser, users }: DeviceC
     }
   };
 
-  const renderRunningInfo = () => {
-    if (!isRunning) return null;
+  const handleStartDevice = async () => {
+    try {
+      setIsStarting(true);
+      const totalMinutes = (hours * 60) + minutes;
+      await onStartDevice(device.id, totalMinutes);
+      setIsExpanded(false);
+    } finally {
+      setIsStarting(false);
+    }
+  };
 
-    return (
-      <>
-        <div className="info-row">
-          <span className="label">Time Left</span>
-          <span>{formatTimeLeft(device.time_left || 0)}</span>
-        </div>
+  const formatTimeLeft = (seconds: number): string => {
+    if (seconds <= 0) return 'Not running';
 
-        <div className="info-row">
-          <span className="label">End Time</span>
-          <span>
-            {device.end_time ? new Date(device.end_time).toLocaleString() : 'N/A'}
-          </span>
-        </div>
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
 
-        <div className="info-row">
-          <span className="label">User</span>
-          <span>{deviceUser ? deviceUser.name : `ID: ${device.user_id}`}</span>
-        </div>
+    const parts = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    parts.push(`${remainingSeconds}s`);
 
-        {canStop && (
-          <Button
-            variant="danger"
-            fullWidth
-            onClick={handleStopDevice}
-            disabled={isStopping}
-          >
-            {isStopping ? (
-              <div className="button-content">
-                <LoadingSpinner size={16} color="white" />
-                <span className="ml-2">Stopping...</span>
-              </div>
-            ) : (
-              'Stop Device'
-            )}
-          </Button>
-        )}
-      </>
-    );
+    return parts.join(' ');
+  };
+
+  const formatCurrency = (amount: number) => {
+    return `€${amount.toFixed(2)}`;
+  };
+
+  const calculateCost = (): string => {
+    const totalMinutes = (hours * 60) + minutes;
+    const cost = (device.hourly_cost * totalMinutes) / 60;
+    return formatCurrency(cost);
   };
 
   return (
-    <div className="device-card">
+    <div
+      className={`device-card ${isRunning ? 'running' : ''} ${isExpanded ? 'expanded' : ''}`}
+      onClick={() => !isRunning && setIsExpanded(!isExpanded)}
+    >
       <div className="device-header">
-        <h3>
-          {device.name}
+        <div className="device-title">
+          <h3>{device.name}</h3>
           <span className="device-type">{device.type}</span>
-        </h3>
-      </div>
-
-      <div className="device-info">
-        <div className="info-row">
-          <span className="label">Status</span>
-          <span className={isRunning ? 'status-running' : 'status-available'}>
-            {isRunning ? 'Running' : 'Available'}
+        </div>
+        <div className="device-status">
+          <span className={`status-indicator ${isRunning ? 'running' : 'available'}`}>
+            {isStarting || isStopping ? (
+              <>
+                <LoadingSpinner size={14} color={isRunning ? '#2E7D32' : '#1976D2'} />
+                <span>{isStarting ? 'Starting...' : 'Stopping...'}</span>
+              </>
+            ) : (
+              isRunning ? 'In Use' : 'Available'
+            )}
           </span>
         </div>
-
-        <div className="info-row">
-          <span className="label">Cost</span>
-          <span>{formatCurrency(device.hourly_cost)}/hour</span>
-        </div>
-
-        {renderRunningInfo()}
       </div>
+
+      {isRunning ? (
+        <div className="device-content">
+          <div className="info-grid">
+            <div className="info-item">
+              <span className="label">Time Left</span>
+              <span className="value">{formatTimeLeft(device.time_left || 0)}</span>
+            </div>
+            <div className="info-item">
+              <span className="label">User</span>
+              <span className="value">{deviceUser ? deviceUser.name : `ID: ${device.user_id}`}</span>
+            </div>
+          </div>
+
+          {canStop && (
+            <div className="action-buttons">
+              <Button
+                variant="danger"
+                fullWidth
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStopDevice();
+                }}
+                disabled={isStopping}
+              >
+                {isStopping ? (
+                  <>
+                    <LoadingSpinner size={16} color="white" />
+                    <span>Stopping...</span>
+                  </>
+                ) : (
+                  'Stop Device'
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className={`device-content ${isExpanded ? 'show' : ''}`}>
+          <div className="info-grid">
+            <div className="info-item">
+              <span className="label">Cost</span>
+              <span className="value">{formatCurrency(device.hourly_cost)}/hour</span>
+            </div>
+          </div>
+
+          {isExpanded && (
+            <div className="start-controls" onClick={e => e.stopPropagation()}>
+              <div className="duration-selector">
+                <label>Duration:</label>
+                <div className="time-inputs">
+                  <div className="time-input-group">
+                    <input
+                      type="number"
+                      min="0"
+                      max="24"
+                      value={hours}
+                      onChange={(e) => setHours(Math.min(24, Math.max(0, parseInt(e.target.value) || 0)))}
+                      className="time-input"
+                    />
+                    <span className="time-label">hours</span>
+                  </div>
+                  <div className="time-input-group">
+                    <input
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={minutes}
+                      onChange={(e) => setMinutes(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
+                      className="time-input"
+                    />
+                    <span className="time-label">minutes</span>
+                  </div>
+                </div>
+                <div className="estimated-cost">
+                  Estimated cost: {calculateCost()}
+                </div>
+              </div>
+
+              <div className="quick-duration-buttons">
+                <Button
+                  variant="ghost"
+                  onClick={() => { setHours(0); setMinutes(30); }}
+                >
+                  30m
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => { setHours(1); setMinutes(0); }}
+                >
+                  1h
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => { setHours(1); setMinutes(30); }}
+                >
+                  1.5h
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => { setHours(2); setMinutes(0); }}
+                >
+                  2h
+                </Button>
+              </div>
+
+              <div className="action-buttons">
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStartDevice();
+                  }}
+                  disabled={isStarting || (hours === 0 && minutes === 0)}
+                >
+                  {isStarting ? (
+                    <>
+                      <LoadingSpinner size={16} color="white" />
+                      <span>Starting...</span>
+                    </>
+                  ) : (
+                    'Start Device'
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -289,6 +289,30 @@ export function Dashboard() {
     }
   };
 
+  const handleStartDevice = async (deviceId: number, duration: number) => {
+    try {
+      const response = await fetch(`${API_URL}/device/start/${deviceId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          user_id: users.find(u => u.is_admin)?.uid || -1,
+          duration_minutes: duration
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to start device');
+      }
+    } catch (error) {
+      console.error('Error starting device:', error);
+      throw error;
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -422,6 +446,7 @@ export function Dashboard() {
                 key={device.id}
                 device={device}
                 onStopDevice={handleStopDevice}
+                onStartDevice={handleStartDevice}
                 currentUser={users.find(u => u.is_admin) || { uid: 0, name: '', cash: 0, creation_time: new Date().toISOString(), is_admin: false }}
                 users={users}
               />
