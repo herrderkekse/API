@@ -416,7 +416,7 @@ export function Dashboard() {
   };
 
   return (
-    <>
+    <div className="dashboard">
       <div className="devices-section">
         <h2>Devices</h2>
         <div className="device-grid">
@@ -486,6 +486,6 @@ export function Dashboard() {
         onChange={(changes) => setEditingUser(prev => prev ? { ...prev, ...changes } : null)}
         onClose={() => setEditingUser(null)}
       />
-    </>
+    </div>
   );
 }

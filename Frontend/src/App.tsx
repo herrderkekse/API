@@ -1,8 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './components/Login';
-import { AdminLayout } from './components/Layout/Layout';
+import { Layout } from './components/Layout/Layout';
 import { Dashboard } from './components/Dashboard/Dashboard';
+import { StatisticsScreen } from './components/StatisticsScreen/StatisticsScreen';
 import './App.css';
+
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token');
@@ -18,9 +20,19 @@ function App() {
           path="/dashboard"
           element={
             <PrivateRoute>
-              <AdminLayout>
+              <Layout>
                 <Dashboard />
-              </AdminLayout>
+              </Layout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/statistics"
+          element={
+            <PrivateRoute>
+              <Layout>
+                <StatisticsScreen />
+              </Layout>
             </PrivateRoute>
           }
         />
