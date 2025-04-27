@@ -1,8 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './components/Login';
 import { Layout } from './components/Layout/Layout';
-import { Dashboard } from './components/Dashboard/Dashboard';
+import { DeviceScreen } from './components/DeviceScreen/DeviceScreen';
 import { StatisticsScreen } from './components/StatisticsScreen/StatisticsScreen';
+import { UserManagementScreen } from './components/UserManagement/UserManagementScreen';
 import './App.css';
 
 
@@ -21,7 +22,17 @@ function App() {
           element={
             <PrivateRoute>
               <Layout>
-                <Dashboard />
+                <DeviceScreen />
+              </Layout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <PrivateRoute>
+              <Layout>
+                <UserManagementScreen />
               </Layout>
             </PrivateRoute>
           }

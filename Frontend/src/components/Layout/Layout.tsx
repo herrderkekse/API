@@ -42,7 +42,13 @@ export function Layout({ children }: LayoutProps) {
             className={`tab ${activeTab === '/dashboard' ? 'active' : ''}`}
             onClick={() => handleTabChange('/dashboard')}
           >
-            Dashboard
+            Devices
+          </div>
+          <div
+            className={`tab ${activeTab === '/users' ? 'active' : ''}`}
+            onClick={() => handleTabChange('/users')}
+          >
+            User Management
           </div>
           <div
             className={`tab ${activeTab === '/statistics' ? 'active' : ''}`}
