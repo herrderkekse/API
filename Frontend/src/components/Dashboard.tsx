@@ -72,44 +72,44 @@ const DeviceCard = ({
   const canStop = isAdmin || currentUser.uid === device.user_id;
 
   return (
-    <div className={`device-card ${isRunning ? 'running' : 'available'}`}>
+    <div className="device-card">
       <div className="device-header">
-        <h3>{device.name}</h3>
-        <span className="device-type">{device.type}</span>
+        <h3>
+          {device.name}
+          <span className="device-type">{device.type}</span>
+        </h3>
       </div>
 
       <div className="device-info">
         <div className="info-row">
-          <span className="label">Status:</span>
-          <span className={`status ${isRunning ? 'status-running' : 'status-available'}`}>
+          <span className="label">Status</span>
+          <span className={isRunning ? 'status-running' : 'status-available'}>
             {isRunning ? 'Running' : 'Available'}
           </span>
         </div>
 
         <div className="info-row">
-          <span className="label">Cost:</span>
-          <span className="cost">{formatCurrency(device.hourly_cost)}/hour</span>
+          <span className="label">Cost</span>
+          <span>{formatCurrency(device.hourly_cost)}/hour</span>
         </div>
 
         {isRunning && (
           <>
             <div className="info-row">
-              <span className="label">Time Left:</span>
-              <span className="time-left">{formatTimeLeft(device.time_left || 0)}</span>
+              <span className="label">Time Left</span>
+              <span>{formatTimeLeft(device.time_left || 0)}</span>
             </div>
 
             <div className="info-row">
-              <span className="label">End Time:</span>
-              <span className="end-time">
+              <span className="label">End Time</span>
+              <span>
                 {device.end_time ? new Date(device.end_time).toLocaleString() : 'N/A'}
               </span>
             </div>
 
             <div className="info-row">
-              <span className="label">User:</span>
-              <span className="user-info">
-                {deviceUser ? deviceUser.name : `ID: ${device.user_id}`}
-              </span>
+              <span className="label">User</span>
+              <span>{deviceUser ? deviceUser.name : `ID: ${device.user_id}`}</span>
             </div>
 
             {canStop && (
