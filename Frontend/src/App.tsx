@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './components/Login';
-import { Dashboard } from './components/Dashboard';
+import { AdminLayout } from './components/Layout/Layout';
+import { Dashboard } from './components/Dashboard/Dashboard';
 import './App.css';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -17,7 +18,9 @@ function App() {
           path="/dashboard"
           element={
             <PrivateRoute>
-              <Dashboard />
+              <AdminLayout>
+                <Dashboard />
+              </AdminLayout>
             </PrivateRoute>
           }
         />

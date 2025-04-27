@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import './Dashboard.css';
-import { Button } from './Button/Button';
-import { DeviceCard } from './DeviceCard/DeviceCard';
-import { UserTable } from './UserTable/UserTable';
+import { Button } from '../Button/Button';
+import { DeviceCard } from '../DeviceCard/DeviceCard';
+import { UserTable } from '../UserTable/UserTable';
 
 interface User {
   uid: number;
@@ -269,11 +269,6 @@ export function Dashboard() {
     setDeviceWebsockets(newWebsockets);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.href = '/';
-  };
-
   const handleStopDevice = async (deviceId: number) => {
     try {
       const response = await fetch(`${API_URL}/device/stop/${deviceId}`, {
@@ -416,47 +411,43 @@ export function Dashboard() {
     }
   };
 
+  const handleEditUserClick = (user: User) => {
+    setEditingUser(user);
+  };
+
   return (
-    <div className="dashboard">
-      <div className="container">
-        <div className="header">
-          <h1>Waschsalon Admin Panel</h1>
-          <div>
-            <Button
-              variant="secondary"
-              onClick={handleLogout}
-              className="ml-2"
-            >
-              Logout
-            </Button>
-          </div>
+    <>
+      <div className="devices-section">
+        <h2>Devices</h2>
+        <div className="device-grid">
+          {devices.map(device => (
+            <DeviceCard
+              key={device.id}
+              device={device}
+              onStopDevice={handleStopDevice}
+              onStartDevice={handleStartDevice}
+              currentUser={users.find(u => u.is_admin) || { uid: 0, name: '', cash: 0, creation_time: new Date().toISOString(), is_admin: false }}
+              users={users}
+            />
+          ))}
         </div>
+      </div>
 
-        <div className="devices-section">
-          <h2>Devices</h2>
-          <div className="device-grid">
-            {devices.map(device => (
-              <DeviceCard
-                key={device.id}
-                device={device}
-                onStopDevice={handleStopDevice}
-                onStartDevice={handleStartDevice}
-                currentUser={users.find(u => u.is_admin) || { uid: 0, name: '', cash: 0, creation_time: new Date().toISOString(), is_admin: false }}
-                users={users}
-              />
-            ))}
-          </div>
+      <div className="user-management">
+        <div className="user-management-header">
+          <h2>User Management</h2>
+          <Button variant="primary" onClick={() => setCreateModal({ isOpen: true, username: '', password: '', isAdmin: false })}>
+            Create User
+          </Button>
         </div>
-
-        <h2>User Management</h2>
         <UserTable
           users={users}
-          onEdit={setEditingUser}
+          onEdit={handleEditUserClick}
           onDelete={handleDeleteUser}
           onRefresh={loadUsers}
           onCreateUser={async (userData) => {
             try {
-              const response = await fetch(`${API_URL}/user`, {
+              await fetch(`${API_URL}/user`, {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${token}`,
@@ -468,39 +459,33 @@ export function Dashboard() {
                   is_admin: userData.isAdmin
                 })
               });
-
-              if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || 'Failed to create user');
-              }
-
               await loadUsers();
             } catch (error) {
-              throw error instanceof Error ? error : new Error('Failed to create user');
+              throw error;
             }
           }}
         />
-
-        <CreateUserModal
-          isOpen={createModal.isOpen}
-          username={createModal.username}
-          password={createModal.password}
-          isAdmin={createModal.isAdmin}
-          error={error}
-          onSubmit={handleCreateUser}
-          onChange={(changes) => setCreateModal({ ...createModal, ...changes })}
-          onClose={() => setCreateModal({ ...createModal, isOpen: false })}
-        />
-
-        <EditUserModal
-          user={editingUser}
-          isOpen={!!editingUser}
-          error={error}
-          onSubmit={handleEditUser}
-          onChange={(changes) => setEditingUser(prev => prev ? { ...prev, ...changes } : null)}
-          onClose={() => setEditingUser(null)}
-        />
       </div>
-    </div>
+
+      <CreateUserModal
+        isOpen={createModal.isOpen}
+        username={createModal.username}
+        password={createModal.password}
+        isAdmin={createModal.isAdmin}
+        error={error}
+        onSubmit={handleCreateUser}
+        onChange={(changes) => setCreateModal({ ...createModal, ...changes })}
+        onClose={() => setCreateModal({ ...createModal, isOpen: false })}
+      />
+
+      <EditUserModal
+        user={editingUser}
+        isOpen={!!editingUser}
+        error={error}
+        onSubmit={handleEditUser}
+        onChange={(changes) => setEditingUser(prev => prev ? { ...prev, ...changes } : null)}
+        onClose={() => setEditingUser(null)}
+      />
+    </>
   );
 }
