@@ -74,6 +74,11 @@
         <!-- Current Token -->
         <h3>Current Token</h3>
         <div id="currentToken" class="token-display"></div>
+
+        <!-- Get Current User -->
+        <h3>Get Current User</h3>
+        <button onclick="getCurrentUser()">Get Current User</button>
+        <div id="getCurrentUserResponse" class="response"></div>
     </div>
 
     <!-- User Management Section -->
@@ -262,6 +267,15 @@
                 displayResponse('loginResponse', data);
             } catch (error) {
                 displayResponse('loginResponse', { error: error.message }, true);
+            }
+        }
+
+        async function getCurrentUser() {
+            try {
+                const data = await apiCall('/auth/me');
+                displayResponse('getCurrentUserResponse', data);
+            } catch (error) {
+                displayResponse('getCurrentUserResponse', { error: error.message }, true);
             }
         }
 

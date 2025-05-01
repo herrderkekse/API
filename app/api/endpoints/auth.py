@@ -4,7 +4,8 @@ from sqlalchemy import select
 
 from ...database.session import AsyncSessionLocal
 from ...models.user import User
-from ...core.auth import verify_password, create_access_token
+from ...core.auth import verify_password, create_access_token, get_current_user
+from ...schemas.user import UserResponse
 
 router = APIRouter()
 
@@ -28,3 +29,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         "token_type": "bearer",
         "user_id": user.uid
     }
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    return current_user._tojson()
