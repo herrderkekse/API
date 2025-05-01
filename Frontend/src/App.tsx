@@ -4,6 +4,7 @@ import { Layout } from './components/Layout/Layout';
 import { DeviceScreen } from './components/DeviceScreen/DeviceScreen';
 import { StatisticsScreen } from './components/StatisticsScreen/StatisticsScreen';
 import { UserManagementScreen } from './components/UserManagement/UserManagementScreen';
+import { ProfileScreen } from './components/Profile/ProfileScreen';
 import './App.css';
 
 
@@ -43,6 +44,16 @@ function App() {
             <PrivateRoute>
               <Layout>
                 <StatisticsScreen />
+              </Layout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <Layout>
+                <ProfileScreen />
               </Layout>
             </PrivateRoute>
           }

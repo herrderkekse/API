@@ -56,6 +56,12 @@ export function Layout({ children }: LayoutProps) {
           >
             Statistics
           </div>
+          <div
+            className={`tab ${activeTab === '/profile' ? 'active' : ''}`}
+            onClick={() => handleTabChange('/profile')}
+          >
+            Profile
+          </div>
         </div>
         <main className="content">
           {children}
