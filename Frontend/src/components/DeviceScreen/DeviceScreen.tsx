@@ -156,7 +156,6 @@ export function DeviceScreen() {
         </div>
       )}
       <div className="devices-section">
-        <h2>Devices</h2>
         <div className="device-grid">
           {devices.map(device => (
             <DeviceCard

@@ -300,15 +300,15 @@ export function UserManagementScreen() {
   return (
     <div className="user-management-screen">
       <div className="user-management-header">
-        <h2>User Management</h2>
-        <Button 
-          variant="primary" 
+        <h2>Currently Resistered Users</h2>
+        <Button
+          variant="primary"
           onClick={() => setCreateModal({ isOpen: true, username: '', password: '', isAdmin: false })}
         >
           Create User
         </Button>
       </div>
-      
+
       <UserTable
         users={users}
         onEdit={(user) => setEditingUser(user)}
