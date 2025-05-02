@@ -3,9 +3,9 @@ from datetime import datetime, timezone, timedelta
 import json
 from sqlalchemy import select
 from fastapi import Depends, Header, HTTPException
-from typing import Optional
+from typing import Optional, Callable, Any
 
-from ..database.session import AsyncSessionLocal
+from ..database.session import get_db
 from ..models.idempotency import IdempotencyKey
 
 def datetime_handler(obj):
@@ -24,14 +24,18 @@ async def check_idempotency_key(
     return idempotency_key
 
 def idempotent_operation(ttl_hours: int = 24):
-    def decorator(func):
+    def decorator(func: Callable[..., Any]):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             idempotency_key = kwargs.get('idempotency_key')
             if not idempotency_key:
                 return await func(*args, **kwargs)
             
-            async with AsyncSessionLocal() as session:
+            # Get database session using dependency
+            db_generator = get_db()
+            session = await anext(db_generator)
+            
+            try:
                 result = await session.execute(
                     select(IdempotencyKey).where(IdempotencyKey.key == idempotency_key)
                 )
@@ -56,5 +60,11 @@ def idempotent_operation(ttl_hours: int = 24):
                 await session.commit()
                 
                 return response
+            finally:
+                # Close the session
+                try:
+                    await db_generator.asend(None)
+                except StopAsyncIteration:
+                    pass
         return wrapper
     return decorator

@@ -1,13 +1,16 @@
 from sqlalchemy import select
 
-from ..database.session import AsyncSessionLocal
+from ..database.session import get_db
 from ..models.user import User
 from ..models.device import Device
 from ..core.auth import get_password_hash
 from ..config import DEVICES
 
 async def initialize_database():
-    async with AsyncSessionLocal() as session:
+    db_generator = get_db()
+    session = await anext(db_generator)
+    
+    try:
         # Create initial admin user if no users exist
         result = await session.execute(select(User))
         if not result.scalars().first():
@@ -40,3 +43,9 @@ async def initialize_database():
                 await session.delete(device)
         
         await session.commit()
+    finally:
+        # Close the session
+        try:
+            await db_generator.asend(None)
+        except StopAsyncIteration:
+            pass

@@ -4,6 +4,7 @@ from sqlalchemy import select
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Set
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # Store WebSocket connections
 time_ws_connections: Dict[int, Set[WebSocket]] = {}
@@ -35,7 +36,7 @@ async def broadcast_status_update(device_id: int, data: dict):
         # Clean up dead connections
         status_ws_connections[device_id] -= dead_connections
 
-from ...database.session import AsyncSessionLocal
+from ...database.session import get_db
 from ...models.device import Device
 from ...models.user import User
 from ...schemas.device import DeviceResponse
@@ -51,23 +52,26 @@ router = APIRouter()
 
 
 @router.get("/all", response_model=List[DeviceResponse])
-async def get_all_devices(current_user: User = Depends(get_current_user)):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(select(Device))
-        devices = result.scalars().all()
-        
-        # Update status for each device
-        for device in devices:
-            await _update_device_status(session, device)
-        await session.commit()
-        
-        return [device._tojson() for device in devices]
+async def get_all_devices(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Device))
+    devices = result.scalars().all()
+    
+    # Update status for each device
+    for device in devices:
+        await _update_device_status(db, device)
+    await db.commit()
+    
+    return [device._tojson() for device in devices]
 
 @router.post("/start/{device_id}", response_model=DeviceResponse)
 async def start_device(
     device_id: int,
     request: DeviceStartRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     if not 1 <= device_id <= 5:
         raise HTTPException(
@@ -80,18 +84,18 @@ async def start_device(
             detail="Duration must be positive"
         )
     
-    async with AsyncSessionLocal() as session:
-        return await _handle_device_start(
-            session, 
-            device_id, 
-            request.user_id, 
-            request.duration_minutes
-        )
+    return await _handle_device_start(
+        db, 
+        device_id, 
+        request.user_id, 
+        request.duration_minutes
+    )
 
 @router.post("/stop/{device_id}")
 async def stop_device(
     device_id: int,
-    current_user: User = Depends(get_admin_user)
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
 ):
     if not 1 <= device_id <= 5:
         raise HTTPException(
@@ -99,8 +103,7 @@ async def stop_device(
             detail="Invalid device ID"
         )
     
-    async with AsyncSessionLocal() as session:
-        return await _handle_device_stop(session, device_id)
+    return await _handle_device_stop(db, device_id)
 
 @router.websocket("/ws/timeleft/{device_id}")
 async def time_ws_endpoint(websocket: WebSocket, device_id: int):
@@ -116,7 +119,10 @@ async def time_ws_endpoint(websocket: WebSocket, device_id: int):
 
     try:
         while True:
-            async with AsyncSessionLocal() as session:
+            db_generator = get_db()
+            session = await anext(db_generator)
+            
+            try:
                 result = await session.execute(select(Device).where(Device.id == device_id))
                 device = result.scalars().first()
                 
@@ -144,6 +150,12 @@ async def time_ws_endpoint(websocket: WebSocket, device_id: int):
                         })
                 
                 await websocket.send_json(response_data)
+            finally:
+                try:
+                    await db_generator.asend(None)
+                except StopAsyncIteration:
+                    pass
+                
             await asyncio.sleep(1)
     finally:
         # Remove connection when client disconnects
@@ -167,7 +179,10 @@ async def device_status_ws_endpoint(websocket: WebSocket, device_id: int):
     try:
         last_status = None
         while True:
-            async with AsyncSessionLocal() as session:
+            db_generator = get_db()
+            session = await anext(db_generator)
+            
+            try:
                 result = await session.execute(select(Device).where(Device.id == device_id))
                 device = result.scalars().first()
                 
@@ -198,6 +213,11 @@ async def device_status_ws_endpoint(websocket: WebSocket, device_id: int):
                         response["end_time"] = device.end_time.isoformat()
                     await websocket.send_json(response)
                     last_status = current_status
+            finally:
+                try:
+                    await db_generator.asend(None)
+                except StopAsyncIteration:
+                    pass
                         
             await asyncio.sleep(1)
     finally:
@@ -210,7 +230,8 @@ async def device_status_ws_endpoint(websocket: WebSocket, device_id: int):
 @router.get("/{device_id}", response_model=DeviceResponse)
 async def get_device(
     device_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     if not 1 <= device_id <= 5:
         raise HTTPException(
@@ -218,9 +239,8 @@ async def get_device(
             detail="Invalid device ID"
         )
     
-    async with AsyncSessionLocal() as session:
-        device = await _get_device_with_status_update(session, device_id)
-        return device._tojson()
+    device = await _get_device_with_status_update(db, device_id)
+    return device._tojson()
 
 # Helper functions
 async def _get_device_with_status_update(session, device_id):
