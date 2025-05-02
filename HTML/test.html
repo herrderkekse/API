@@ -219,6 +219,22 @@
         // Helper function to display responses
         function displayResponse(elementId, data, isError = false) {
             const element = document.getElementById(elementId);
+
+            // Format cash values if they exist in the response
+            if (data && typeof data === 'object') {
+                if (data.cash !== undefined) {
+                    data.cash = parseFloat(data.cash).toFixed(2);
+                }
+                // Also handle arrays of users
+                if (Array.isArray(data)) {
+                    data.forEach(item => {
+                        if (item && item.cash !== undefined) {
+                            item.cash = parseFloat(item.cash).toFixed(2);
+                        }
+                    });
+                }
+            }
+
             element.textContent = JSON.stringify(data, null, 2);
             element.className = `response ${isError ? 'error' : 'success'}`;
         }

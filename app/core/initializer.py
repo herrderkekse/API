@@ -30,8 +30,18 @@ async def initialize_database():
             device = result.scalars().first()
             
             if not device:
-                device = Device(id=device_config["id"])
+                device = Device(
+                    id=device_config["id"],
+                    name=device_config["name"],
+                    type=device_config["type"],
+                    hourly_cost=device_config["hourly_cost"]
+                )
                 session.add(device)
+            else:
+                # Update existing device with current config values
+                device.name = device_config["name"]
+                device.type = device_config["type"]
+                device.hourly_cost = device_config["hourly_cost"]
         
         # Remove devices that are no longer in config
         result = await session.execute(select(Device))

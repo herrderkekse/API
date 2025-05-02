@@ -108,7 +108,7 @@ async def update_user(
     if user_data.name:
         user.name = user_data.name
     if user_data.cash is not None:
-        user.cash = user_data.cash
+        user.cash = round(user_data.cash, 2)
         
     await db.commit()
     return user._tojson()

@@ -120,6 +120,11 @@ async def test_get_all_devices_empty(test_app, test_user, test_session_factory):
 async def test_start_device_success(test_app, test_user, test_session_factory):
     # Ensure we have a device to start
     device_id = 1
+    initial_cash = 100.0
+    duration_minutes = 30
+    hourly_cost = 10.0
+    expected_cost = (hourly_cost * duration_minutes) / 60
+    
     async with test_session_factory() as session:
         # First clear any existing devices
         await session.execute(text("DELETE FROM device"))
@@ -129,7 +134,7 @@ async def test_start_device_success(test_app, test_user, test_session_factory):
             id=device_id,
             name="Test Device",
             type="test",
-            hourly_cost=10.0,
+            hourly_cost=hourly_cost,
             user_id=None,
             end_time=None
         )
@@ -138,7 +143,7 @@ async def test_start_device_success(test_app, test_user, test_session_factory):
         # Ensure user has enough cash
         result = await session.execute(select(User).where(User.uid == test_user.uid))
         user = result.scalars().first()
-        user.cash = 100.0  # Ensure enough cash for the test
+        user.cash = initial_cash  # Ensure enough cash for the test
         
         await session.commit()
     
@@ -153,7 +158,6 @@ async def test_start_device_success(test_app, test_user, test_session_factory):
         token = login_response.json()["access_token"]
         
         # Start the device
-        duration_minutes = 30
         response = await ac.post(
             f"/device/start/{device_id}",
             json={
@@ -188,6 +192,12 @@ async def test_start_device_success(test_app, test_user, test_session_factory):
             # Check that end_time is approximately duration_minutes in the future
             time_diff = (end_time - datetime.now(timezone.utc)).total_seconds() / 60
             assert duration_minutes - 1 <= time_diff <= duration_minutes + 1
+            
+            # Verify user's cash was deducted correctly
+            user_result = await session.execute(select(User).where(User.uid == test_user.uid))
+            updated_user = user_result.scalars().first()
+            expected_remaining = round(initial_cash - expected_cost, 2)
+            assert updated_user.cash == expected_remaining
 
 @pytest.mark.asyncio
 async def test_start_device_invalid_id(test_app, test_user):

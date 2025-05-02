@@ -276,12 +276,19 @@ async def _handle_device_start(session, device_id, user_id, duration_minutes):
     device = await _get_or_create_device(session, device_id)
     device_config = _get_device_config(device_id)
     
-    cost = (device_config["hourly_cost"] * duration_minutes) / 60
-    if user.cash < cost:
+    # Use device's hourly_cost if available, otherwise use from config
+    hourly_cost = device.hourly_cost if hasattr(device, 'hourly_cost') and device.hourly_cost is not None else device_config["hourly_cost"]
+    cost = (hourly_cost * duration_minutes) / 60
+    
+    # Convert user.cash to float for comparison
+    if float(user.cash) < cost:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Insufficient funds"
         )
+    
+    # Deduct the cost from user's balance
+    user.cash = round(float(user.cash) - cost, 2)
     
     await _update_device_time(session, device, user_id, duration_minutes)
     return device._tojson()
@@ -392,7 +399,7 @@ async def _process_refund(session, device: Device) -> float:
     
     # Update user's cash balance
     user = await _get_user(session, device.user_id)
-    user.cash = round(user.cash + refund_amount, 2)
+    user.cash = round(float(user.cash) + refund_amount, 2)
     
     # Don't commit here, let the calling function handle the commit
     # to maintain transaction integrity
