@@ -107,11 +107,13 @@ async def stop_device(
 
 @router.websocket("/ws/timeleft/{device_id}")
 async def time_ws_endpoint(websocket: WebSocket, device_id: int):
-    await websocket.accept()
-    if not isinstance(device_id, int) or device_id < 1 or device_id > 5:
+    # Validate device_id before accepting the connection
+    if not 1 <= device_id <= 5:
         await websocket.close(code=1003, reason="Invalid device ID")
         return
-
+    
+    await websocket.accept()
+    
     # Add connection to tracking
     if device_id not in time_ws_connections:
         time_ws_connections[device_id] = set()
@@ -166,10 +168,12 @@ async def time_ws_endpoint(websocket: WebSocket, device_id: int):
 
 @router.websocket("/ws/status/{device_id}")
 async def device_status_ws_endpoint(websocket: WebSocket, device_id: int):
-    await websocket.accept()
-    if not isinstance(device_id, int) or device_id < 1 or device_id > 5:
+    # Validate device_id before accepting the connection
+    if not 1 <= device_id <= 5:
         await websocket.close(code=1003, reason="Invalid device ID")
         return
+    
+    await websocket.accept()
 
     # Add connection to tracking
     if device_id not in status_ws_connections:
