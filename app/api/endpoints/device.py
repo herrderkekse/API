@@ -387,13 +387,14 @@ async def _process_refund(session, device: Device) -> float:
         device_config = _get_device_config(device.id)
         hourly_cost = device_config["hourly_cost"]
     
-    refund_amount = (hourly_cost * time_left) / 60
+    # Calculate refund amount and round to 2 decimal places (cents)
+    refund_amount = round((hourly_cost * time_left) / 60, 2)
     
     # Update user's cash balance
     user = await _get_user(session, device.user_id)
-    user.cash += refund_amount
+    user.cash = round(user.cash + refund_amount, 2)
     
     # Don't commit here, let the calling function handle the commit
     # to maintain transaction integrity
     
-    return round(refund_amount, 2)
+    return refund_amount
