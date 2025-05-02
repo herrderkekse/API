@@ -370,16 +370,30 @@ async def _process_refund(session, device: Device) -> float:
     if not device.end_time or not device.user_id:
         return 0.0
     
-    time_left = max(0, (device.end_time - datetime.now(timezone.utc)).total_seconds() / 60)  # in minutes
+    # Ensure end_time has timezone info
+    if device.end_time.tzinfo is None:
+        end_time = device.end_time.replace(tzinfo=timezone.utc)
+    else:
+        end_time = device.end_time
+    
+    time_left = max(0, (end_time - datetime.now(timezone.utc)).total_seconds() / 60)  # in minutes
     if time_left <= 0:
         return 0.0
     
-    device_config = _get_device_config(device.id)
-    refund_amount = (device_config["hourly_cost"] * time_left) / 60
+    # Use the device's own hourly_cost if available, otherwise get from config
+    if hasattr(device, 'hourly_cost') and device.hourly_cost is not None:
+        hourly_cost = device.hourly_cost
+    else:
+        device_config = _get_device_config(device.id)
+        hourly_cost = device_config["hourly_cost"]
+    
+    refund_amount = (hourly_cost * time_left) / 60
     
     # Update user's cash balance
     user = await _get_user(session, device.user_id)
     user.cash += refund_amount
-    await session.commit()
+    
+    # Don't commit here, let the calling function handle the commit
+    # to maintain transaction integrity
     
     return round(refund_amount, 2)

@@ -338,6 +338,7 @@ async def test_start_device_insufficient_funds(test_app, test_user, test_session
         assert "detail" in data
         assert "Insufficient funds" in data["detail"]
 
+####################POST /stop ENDPOINT####################
 @pytest.mark.asyncio
 async def test_stop_device_success(test_app, test_user, test_session_factory):
     # Set up a device that's in use
@@ -399,8 +400,6 @@ async def test_stop_device_success(test_app, test_user, test_session_factory):
             assert updated_device.user_id is None
             assert updated_device.end_time is None
 
-
-####################POST /stop ENDPOINT####################
 @pytest.mark.asyncio
 async def test_stop_device_not_admin(test_app, test_user, test_session_factory):
     # Set up a device that's in use
@@ -529,8 +528,73 @@ async def test_stop_device_not_running(test_app, test_user, test_session_factory
 
 @pytest.mark.asyncio
 async def test_stop_device_refund(test_app, test_user, test_session_factory):
-    assert 0 == 0
-    # TODO
+    # Set up a device that's in use
+    device_id = 1
+    duration_minutes = 30
+    initial_cash = 100.0
+    hourly_cost = 10.0
+    
+    async with test_session_factory() as session:
+        # First clear any existing devices
+        await session.execute(text("DELETE FROM device"))
+        
+        # Create a test device that's in use
+        device = Device(
+            id=device_id,
+            name="Test Device",
+            type="test",
+            hourly_cost=hourly_cost,
+            user_id=test_user.uid,
+            end_time=datetime.now(timezone.utc) + timedelta(minutes=duration_minutes)
+        )
+        session.add(device)
+        
+        # Set user's initial cash and make them admin
+        result = await session.execute(select(User).where(User.uid == test_user.uid))
+        user = result.scalars().first()
+        user.cash = initial_cash
+        user.is_admin = True
+        
+        await session.commit()
+    
+    # Login to get token
+    async with AsyncClient(app=test_app, base_url="http://test") as ac:
+        login_response = await ac.post(
+            "/auth/token",
+            data={"username": "testuser", "password": "testpassword"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        
+        token = login_response.json()["access_token"]
+        
+        # Stop the device
+        response = await ac.post(
+            f"/device/stop/{device_id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Verify refund amount is returned in response
+        assert "refund_amount" in data
+        refund_amount = data["refund_amount"]
+        print(data)
+        assert refund_amount > 0
+        
+        # Calculate expected refund (approximately)
+        # hourly_cost * (duration_minutes / 60) is the total cost
+        # The refund should be close to this amount since we just started the device
+        expected_refund = round((hourly_cost * duration_minutes) / 60, 2)
+        # Allow for a small difference due to time elapsed during the test
+        assert abs(refund_amount - expected_refund) < 1.0
+        
+    # Verify user's cash was updated in the database
+    async with test_session_factory() as session:
+        result = await session.execute(select(User).where(User.uid == test_user.uid))
+        updated_user = result.scalars().first()
+        expected_cash = initial_cash + refund_amount
+        assert updated_user.cash == expected_cash
 
 
 ####################GET /{device_id} ENDPOINT####################
