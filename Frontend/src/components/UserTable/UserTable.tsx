@@ -8,6 +8,7 @@ interface User {
   cash: number;
   is_admin: boolean;
   creation_time: string;
+  has_keycard: boolean;
 }
 
 interface UserTableProps {
@@ -41,6 +42,7 @@ export function UserTable({ users, onEdit, onDelete, onRefresh }: UserTableProps
             <th>Username</th>
             <th>Cash</th>
             <th>Admin</th>
+            <th>Key Card</th>
             <th>Created</th>
             <th className="actions-header">
               Actions
@@ -63,6 +65,7 @@ export function UserTable({ users, onEdit, onDelete, onRefresh }: UserTableProps
               <td>{user.name}</td>
               <td>{user.cash.toFixed(2)}</td>
               <td>{user.is_admin ? 'Yes' : 'No'}</td>
+              <td>{user.has_keycard ? 'Yes' : 'No'}</td>
               <td>{new Date(user.creation_time).toLocaleString()}</td>
               <td>
                 <Button

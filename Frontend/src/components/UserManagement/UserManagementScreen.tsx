@@ -9,6 +9,7 @@ interface User {
   cash: number;
   is_admin: boolean;
   creation_time: string;
+  has_keycard: boolean;
 }
 
 interface CreateUserModal {
