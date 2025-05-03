@@ -26,7 +26,6 @@
   border-radius: 4px;
 }
 
-.login-section,
 .link-section {
   margin-top: 2rem;
   padding: 1.5rem;
@@ -36,7 +35,7 @@
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-group label {
@@ -51,6 +50,12 @@
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 1rem;
+  letter-spacing: 0.2em;
+  text-align: center;
+}
+
+.form-group input[type="password"] {
+  font-size: 1.5rem;
 }
 
 button {
@@ -62,6 +67,8 @@ button {
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  margin-right: 1rem;
+  margin-bottom: 1rem;
 }
 
 button:hover {
@@ -74,7 +81,11 @@ button:disabled {
 }
 
 .link-button {
-  margin-right: 1rem;
+  background-color: #e74c3c;
+}
+
+.link-button:hover {
+  background-color: #c0392b;
 }
 
 .dashboard-button {
