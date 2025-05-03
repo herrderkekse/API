@@ -22,6 +22,7 @@ class UserResponse(UserBase):
     cash: float
     creation_time: datetime
     is_admin: bool
+    has_keycard: bool = False  # Add this field to indicate if key card auth is available
 
     class Config:
         orm_mode = True

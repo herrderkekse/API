@@ -21,5 +21,6 @@ class User(Base):
             "name": self.name,
             "cash": float(self.cash),
             "creation_time": self.creation_time,
-            "is_admin": self.is_admin
+            "is_admin": self.is_admin,
+            "has_keycard": self.key_card_hash is not None and self.pin_hash is not None
         }
