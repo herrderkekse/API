@@ -12,6 +12,8 @@ class User(Base):
     creation_time = Column(DateTime, default=datetime.now(timezone.utc))
     hashed_password = Column(String(255))
     is_admin = Column(Boolean, default=False)
+    key_card_hash = Column(String(255), nullable=True)
+    pin_hash = Column(String(255), nullable=True)
 
     def _tojson(self):
         return {
