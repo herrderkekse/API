@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Login } from './components/Login';
+import { Login } from './components/LoginScreen/Login';
+import { Signup } from './components/LoginScreen/Signup';
 import { Layout } from './components/Layout/Layout';
 import { DeviceScreen } from './components/DeviceScreen/DeviceScreen';
 import { StatisticsScreen } from './components/StatisticsScreen/StatisticsScreen';
@@ -18,6 +19,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
         <Route
           path="/dashboard"
           element={
