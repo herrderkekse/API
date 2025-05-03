@@ -9,6 +9,7 @@ interface User {
   cash: number;
   is_admin: boolean;
   creation_time: string;
+  has_keycard: boolean;
 }
 
 export function ProfileScreen() {
@@ -79,6 +80,41 @@ export function ProfileScreen() {
     setShowPasswordModal(true);
   };
 
+  // Add a new function to handle keycard removal
+  const handleRemoveKeycard = async () => {
+    if (!user) return;
+
+    if (!window.confirm('Are you sure you want to remove your linked key card?')) {
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_URL}/user/${user.uid}/keycard`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to remove key card');
+      }
+
+      // Reload user profile to update the UI
+      await loadUserProfile();
+      setSuccess('Key card removed successfully');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to remove key card');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (isLoading && !user) {
     return <div className="profile-screen">Loading profile...</div>;
   }
@@ -113,6 +149,22 @@ export function ProfileScreen() {
             label="Admin"
             value={user.is_admin ? 'Yes' : 'No'}
           />
+
+          <div className="profile-attribute-row">
+            <ProfileAttribute
+              label="Key Card"
+              value={user.has_keycard ? 'Linked' : 'Not Linked'}
+            />
+            {user.has_keycard && (
+              <Button
+                variant="danger"
+                onClick={handleRemoveKeycard}
+                disabled={isLoading}
+              >
+                Remove Key Card
+              </Button>
+            )}
+          </div>
 
           <ProfileAttribute
             label="Account Created"

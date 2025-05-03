@@ -124,3 +124,19 @@
   margin-bottom: 20px;
   border-left: 4px solid #ffeeba;
 }
+
+.profile-attribute-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.profile-attribute-row .profile-attribute {
+  margin-bottom: 0;
+  flex-grow: 1;
+}
+
+.profile-attribute-row button {
+  margin-left: 1rem;
+}
