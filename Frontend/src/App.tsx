@@ -6,6 +6,7 @@ import { DeviceScreen } from './components/DeviceScreen/DeviceScreen';
 import { StatisticsScreen } from './components/StatisticsScreen/StatisticsScreen';
 import { UserManagementScreen } from './components/UserManagement/UserManagementScreen';
 import { ProfileScreen } from './components/Profile/ProfileScreen';
+import { LinkCardScreen } from './components/LinkCardScreen/LinkCardScreen';
 import './App.css';
 
 
@@ -20,6 +21,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/link-card" element={<LinkCardScreen />} />
         <Route
           path="/dashboard"
           element={

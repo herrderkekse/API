@@ -1,9 +1,17 @@
 import { useState, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './style.css';
+
+interface LocationState {
+  returnUrl?: string;
+}
 
 export function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as LocationState;
+  const returnUrl = state?.returnUrl || '/dashboard';
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +56,7 @@ export function Login() {
     formData.append('password', password);
 
     try {
-      const response = await fetch('http://172.18.79.254:8000/auth/token', {
+      const response = await fetch('http://localhost:8000/auth/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -63,7 +71,7 @@ export function Login() {
       }
 
       localStorage.setItem('token', data.access_token);
-      navigate('/dashboard');
+      navigate(returnUrl); // Navigate to the return URL or dashboard
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
