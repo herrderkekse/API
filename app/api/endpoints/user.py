@@ -37,29 +37,27 @@ async def get_user(
         )
     return user._tojson()
 
-@router.post("", response_model=UserResponse)
-async def create_user(
+@router.post("/admin", response_model=UserResponse)
+async def create_admin_user(
     user_data: UserCreate,
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db)
 ):
-    # Check if username already exists
-    result = await db.execute(select(User).where(User.name == user_data.name))
-    if result.scalars().first():
+    return await _createUser(user_data, db)
+
+@router.post("", response_model=UserResponse)
+async def create_user(
+    user_data: UserCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    # this is only for creating regular users. Only admins can create admin users
+    if user_data.is_admin:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already exists"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can create admin accounts"
         )
-        
-    new_user = User(
-        name=user_data.name,
-        cash=0,
-        hashed_password=get_password_hash(user_data.password),
-        is_admin=user_data.is_admin
-    )
-    db.add(new_user)
-    await db.commit()
-    return new_user._tojson()
+    
+    return await _createUser(user_data, db)
 
 @router.delete("/{uid}")
 async def delete_user(
@@ -112,3 +110,25 @@ async def update_user(
         
     await db.commit()
     return user._tojson()
+
+
+# Helper functions
+async def _createUser(user_data: UserCreate, db: AsyncSession):
+    
+    # Check if username already exists
+    result = await db.execute(select(User).where(User.name == user_data.name))
+    if result.scalars().first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already exists"
+        )
+        
+    new_user = User(
+        name=user_data.name,
+        cash=0,
+        hashed_password=get_password_hash(user_data.password),
+        is_admin=user_data.is_admin
+    )
+    db.add(new_user)
+    await db.commit()
+    return new_user._tojson()
