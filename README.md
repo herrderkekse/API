@@ -21,6 +21,31 @@ Login endpoint to obtain access token.
 }
 ```
 
+### POST /auth/token/keycard
+Login endpoint to obtain access token using key card authentication.
+
+**Request Body:**
+```json
+{
+    "key_card_id": "string",
+    "pin": "string"
+}
+```
+
+**Response:**
+```json
+{
+    "access_token": "string",
+    "token_type": "bearer",
+    "user_id": integer
+}
+```
+
+### GET /auth/me
+Get current user information.
+
+**Response:** UserResponse object
+
 ## User Endpoints
 
 ### GET /user/all
@@ -33,8 +58,9 @@ Get all users (admin only).
         "uid": integer,
         "name": string,
         "cash": float,
-        "creation_time": datetime,
-        "is_admin": boolean
+        "creation_time": string (ISO format),
+        "is_admin": boolean,
+        "has_keycard": boolean
     }
 ]
 ```
@@ -46,16 +72,44 @@ Get user by ID. Users can only access their own data unless they are admins.
 - `uid`: integer
 
 **Response:** UserResponse object
+```json
+{
+    "uid": integer,
+    "name": string,
+    "cash": float,
+    "creation_time": string (ISO format),
+    "is_admin": boolean,
+    "has_keycard": boolean
+}
+```
 
 ### POST /user
-Create new user (admin only).
+Create new regular user.
 
 **Request Body:**
 ```json
 {
     "name": string,
     "password": string,
-    "is_admin": boolean (optional, default: false)
+    "is_admin": boolean (optional, default: false),
+    "key_card_id": string (optional),
+    "pin": string (optional)
+}
+```
+
+**Response:** UserResponse object
+
+### POST /user/admin
+Create new admin user (admin only).
+
+**Request Body:**
+```json
+{
+    "name": string,
+    "password": string,
+    "is_admin": boolean (optional),
+    "key_card_id": string (optional),
+    "pin": string (optional)
 }
 ```
 
@@ -71,24 +125,29 @@ Update user information. Users can only update their own data unless they are ad
 ```json
 {
     "name": string (optional),
-    "cash": float (optional)
+    "cash": float (optional),
+    "key_card_id": string (optional),
+    "pin": string (optional)
 }
 ```
 
 **Response:** UserResponse object
 
-### DELETE /user/{uid}
-Delete user. Users can only delete their own account unless they are admins.
+### POST /user/{uid}/keycard
+Add key card authentication to a user account.
 
 **Path Parameters:**
 - `uid`: integer
 
-**Response:**
+**Request Body:**
 ```json
 {
-    "message": "User deleted successfully"
+    "key_card_id": string,
+    "pin": string
 }
 ```
+
+**Response:** UserResponse object
 
 ## Device Endpoints
 
@@ -104,7 +163,7 @@ Get all devices.
         "type": string,
         "hourly_cost": float,
         "user_id": integer (nullable),
-        "end_time": datetime (nullable),
+        "end_time": string (ISO format, nullable),
         "time_left": float (nullable)
     }
 ]
@@ -117,6 +176,17 @@ Get device by ID.
 - `device_id`: integer (1-5)
 
 **Response:** DeviceResponse object
+```json
+{
+    "id": integer,
+    "name": string,
+    "type": string,
+    "hourly_cost": float,
+    "user_id": integer (nullable),
+    "end_time": string (ISO format, nullable),
+    "time_left": float (nullable)
+}
+```
 
 ### POST /device/start/{device_id}
 Start a device.
@@ -144,7 +214,15 @@ Stop a device (admin only).
 ```json
 {
     "message": "Device stopped successfully",
-    "device": DeviceResponse,
+    "device": {
+        "id": integer,
+        "name": string,
+        "type": string,
+        "hourly_cost": float,
+        "user_id": null,
+        "end_time": null,
+        "time_left": 0
+    },
     "refund_amount": float
 }
 ```
@@ -176,7 +254,7 @@ WebSocket endpoint for real-time device status updates.
 {
     "device_id": integer,
     "running": boolean,
-    "end_time": string (ISO format, only when running: true)
+    "end_time": string (ISO format, nullable)
 }
 ```
 
