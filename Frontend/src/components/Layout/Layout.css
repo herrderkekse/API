@@ -1,90 +1,175 @@
+:root {
+  --primary-color: #11121a;
+  --hover-color: #272832;
+  --accent-color: #0071FF;
+  --text-color: #c9c9c9;
+}
+
 .admin-layout {
   min-height: 100vh;
-  width: 100%;
-  background-color: white;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1a1a1a;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
+  min-height: 100dvh;
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .container {
   width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
 }
 
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  padding: 1rem 2rem;
-  background-color: white;
-  box-sizing: border-box;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  z-index: 10;
-}
-
-.header h1 {
-  font-size: 1.8rem;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin: 0;
-}
-
-.tab-bar {
-  display: flex;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
-  padding: 0 2rem;
-}
-
-.tab {
-  padding: 1rem 1.5rem;
-  font-weight: 500;
-  color: #6c757d;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-bottom: 2px solid transparent;
-}
-
-.tab:hover {
-  color: #0066ff;
-}
-
-.tab.active {
-  color: #0066ff;
-  border-bottom: 2px solid #0066ff;
+  display: none;
+  /* Hidden as we've moved the title to the navbar */
 }
 
 .content {
-  flex: 1;
-  width: 100%;
-  background-color: #f8f9fa;
-  padding: 2rem;
-  overflow-y: auto;
-  overflow-x: hidden;
+  padding: min(5em, 7%);
+}
+
+/* Skip link for accessibility */
+.skip-link {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  background-color: var(--accent-color);
+  color: #ffffff;
+  padding: 12px 24px;
+  border-radius: 5px;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 1rem;
+  transition: opacity 0.3s ease;
+}
+
+.skip-link:focus {
+  opacity: 1;
+  pointer-events: auto;
+  outline: 3px solid #ffffff;
+}
+
+/* Navbar styling */
+#navbar {
+  background-color: var(--primary-color);
+  border-bottom: 1px solid var(--hover-color);
+  height: auto;
+  /* Ensure it only takes the height it needs */
+}
+
+#navbar ul {
+  list-style: none;
   display: flex;
-  flex-direction: column;
+  padding: 0;
+  margin: 0;
   align-items: center;
-  box-sizing: border-box;
+  /* Center items vertically */
 }
 
-.content>* {
-  width: 100%;
-  max-width: 1200px;
+#navbar .home-li {
+  margin-right: auto;
 }
 
-.ml-2 {
-  margin-left: 0.5rem;
+#navbar .home-li h1 {
+  font-size: 1.2rem;
+  /* Reduce the size of the title */
+  margin: 0;
+  padding: 0.5em 0;
+}
+
+#navbar li {
+  display: flex;
+  height: auto;
+}
+
+#navbar a {
+  display: flex;
+  text-decoration: none;
+  color: var(--text-color);
+  padding: 1em 2em;
+  transition: background-color 150ms ease;
+  align-items: center;
+  /* Center text vertically */
+  height: 100%;
+}
+
+#navbar a:hover {
+  background-color: var(--hover-color);
+}
+
+#navbar a.active-link {
+  border-bottom: 2px solid var(--text-color);
+}
+
+#navbar a.accent-link {
+  background-color: var(--accent-color);
+}
+
+#open-sidebar-button {
+  display: none;
+  background: none;
+  border: none;
+  padding: 1em;
+  margin-left: auto;
+  cursor: pointer;
+}
+
+#close-sidebar-button {
+  display: none;
+  background: none;
+  border: none;
+  padding: 1em;
+  cursor: pointer;
+}
+
+#overlay {
+  background: rgba(0, 0, 0, 0.5);
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  display: none;
+}
+
+/* Mobile styles */
+@media screen and (max-width: 800px) {
+
+  #open-sidebar-button,
+  #close-sidebar-button {
+    display: block;
+  }
+
+  #navbar {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    height: 100vh;
+    width: min(15em, 100%);
+    z-index: 10;
+    border-left: 1px solid var(--hover-color);
+    transition: right 300ms ease-in-out;
+  }
+
+  #navbar.show {
+    right: 0;
+  }
+
+  #navbar ul {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  #navbar a {
+    width: 100%;
+    padding-left: 2.5em;
+  }
+
+  #navbar a.active-link {
+    border-bottom: none;
+  }
+
+  #navbar .home-li {
+    margin-right: unset;
+  }
 }

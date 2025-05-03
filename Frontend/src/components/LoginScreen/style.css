@@ -1,25 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-:root {
+/* Login/Signup specific variables */
+.login-page {
   --accent-color: #8672FF;
   --base-color: white;
   --text-color: #2E2B41;
   --input-color: #F3F0FF;
 }
 
-* {
+/* Reset for login page */
+.login-page * {
   margin: 0;
   padding: 0;
 }
 
-html {
+.login-page {
   font-family: Poppins, Segoe UI, sans-serif;
   font-size: 12pt;
   color: var(--text-color);
   text-align: center;
-}
-
-body {
   min-height: 100vh;
   background-image: url(../../assets/background.jpg);
   background-size: cover;
@@ -40,14 +39,14 @@ body {
   justify-content: center;
 }
 
-h1 {
+.wrapper h1 {
   font-size: 3rem;
   font-weight: 900;
   text-transform: uppercase;
   color: var(--text-color);
 }
 
-form {
+.wrapper form {
   width: min(400px, 100%);
   margin-top: 20px;
   margin-bottom: 50px;
@@ -57,13 +56,13 @@ form {
   gap: 10px;
 }
 
-form>div {
+.wrapper form>div {
   width: 100%;
   display: flex;
   justify-content: center;
 }
 
-form label {
+.wrapper form label {
   flex-shrink: 0;
   height: 50px;
   width: 50px;
@@ -78,7 +77,7 @@ form label {
   font-weight: 500;
 }
 
-form input {
+.wrapper form input {
   box-sizing: border-box;
   flex-grow: 1;
   min-width: 0;
@@ -91,29 +90,27 @@ form input {
   background-color: var(--input-color);
   transition: 150ms ease;
   color: var(--text-color);
-  /* Ensure input text is visible */
 }
 
-form input:hover {
+.wrapper form input:hover {
   border-color: var(--accent-color);
 }
 
-form input:focus {
+.wrapper form input:focus {
   outline: none;
   border-color: var(--text-color);
 }
 
-div:has(input:focus)>label {
+.wrapper div:has(input:focus)>label {
   background-color: var(--text-color);
 }
 
-form input::placeholder {
+.wrapper form input::placeholder {
   color: var(--text-color);
   opacity: 0.7;
-  /* Make placeholder slightly transparent */
 }
 
-form button {
+.wrapper form button {
   margin-top: 10px;
   border: none;
   border-radius: 1000px;
@@ -127,27 +124,25 @@ form button {
   transition: 150ms ease;
 }
 
-form button:hover {
+.wrapper form button:hover {
   background-color: var(--text-color);
 }
 
-form button:focus {
+.wrapper form button:focus {
   outline: none;
   background-color: var(--text-color);
 }
 
-p,
-a {
+.wrapper p,
+.wrapper a {
   color: var(--text-color);
-  /* Ensure paragraph text is visible */
 }
 
-a {
+.wrapper a {
   color: var(--accent-color);
-  /* Keep links in accent color */
 }
 
-a:hover {
+.wrapper a:hover {
   text-decoration: underline;
 }
 
@@ -158,14 +153,14 @@ a:hover {
   }
 }
 
-form div.incorrect label {
+.wrapper form div.incorrect label {
   background-color: #f06272;
 }
 
-form div.incorrect input {
+.wrapper form div.incorrect input {
   border-color: #f06272;
 }
 
-#error-message {
+.wrapper #error-message {
   color: #f06272;
 }
