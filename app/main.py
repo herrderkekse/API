@@ -8,10 +8,14 @@ from .database.session import engine
 from .models.base import Base
 from .api.endpoints import device, user, auth
 from .core.initializer import initialize_database
+from .core.logging import setup_logging
 from .config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Set up logging
+    setup_logging()
+    
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await initialize_database()

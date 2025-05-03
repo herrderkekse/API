@@ -2,13 +2,19 @@ from fastapi import APIRouter, Depends, HTTPException, status, Path
 from sqlalchemy import select
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
+import logging
 
 from ...database.session import get_db
 from ...models.user import User
 from ...schemas.user import KeyCardAuth, UserCreate, UserUpdate, UserResponse
 from ...core.auth import get_current_user, get_admin_user, get_password_hash
+from ...core.logging import get_transaction_logger
 
 router = APIRouter()
+# Regular logger
+logger = logging.getLogger(__name__)
+# Special transaction logger
+transaction_logger = get_transaction_logger()
 
 @router.get("/all", response_model=List[UserResponse])
 async def get_all_users(db: AsyncSession = Depends(get_db)): #TODO: make admin only
@@ -110,8 +116,20 @@ async def update_user(
     if user_data.name is not None:
         user.name = user_data.name
     
+    # Log and update cash if provided
     if user_data.cash is not None:
-        user.cash = user_data.cash
+        old_cash = float(user.cash)
+        new_cash = user_data.cash
+        cash_difference = new_cash - old_cash
+        
+        # Log the transaction before making the change
+        transaction_logger.transaction(
+            f"CASH_UPDATE: User {user.uid} ({user.name}) balance changed from {old_cash} to {new_cash} "
+            f"(difference: {cash_difference}) by user {current_user.uid} ({current_user.name})"
+        )
+        
+        # Update the cash value
+        user.cash = new_cash
     
     # Update key card info if provided
     if user_data.key_card_id is not None:

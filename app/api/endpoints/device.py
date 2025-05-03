@@ -5,6 +5,8 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Set
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from ...core.logging import get_transaction_logger
+
 
 # Store WebSocket connections
 time_ws_connections: Dict[int, Set[WebSocket]] = {}
@@ -50,6 +52,7 @@ class DeviceStartRequest(BaseModel):
 
 router = APIRouter()
 
+transaction_logger = get_transaction_logger()
 
 @router.get("/all", response_model=List[DeviceResponse])
 async def get_all_devices(
@@ -287,8 +290,16 @@ async def _handle_device_start(session, device_id, user_id, duration_minutes):
             detail="Insufficient funds"
         )
     
+    # Log the transaction before deducting money
+    old_balance = float(user.cash)
+    new_balance = round(old_balance - cost, 2)
+    transaction_logger.transaction(
+        f"DEVICE_PAYMENT: User {user_id} ({user.name}) paid {cost} for device {device_id} ({device.name}) "
+        f"for {duration_minutes} minutes. Balance changed from {old_balance} to {new_balance}"
+    )
+    
     # Deduct the cost from user's balance
-    user.cash = round(float(user.cash) - cost, 2)
+    user.cash = new_balance
     
     await _update_device_time(session, device, user_id, duration_minutes)
     return device._tojson()
@@ -399,7 +410,16 @@ async def _process_refund(session, device: Device) -> float:
     
     # Update user's cash balance
     user = await _get_user(session, device.user_id)
-    user.cash = round(float(user.cash) + refund_amount, 2)
+    old_balance = float(user.cash)
+    new_balance = round(old_balance + refund_amount, 2)
+    
+    # Log the refund transaction
+    transaction_logger.transaction(
+        f"DEVICE_REFUND: User {device.user_id} ({user.name}) refunded {refund_amount} from device {device.id} "
+        f"({device.name}) for {time_left:.2f} minutes. Balance changed from {old_balance} to {new_balance}"
+    )
+    
+    user.cash = new_balance
     
     # Don't commit here, let the calling function handle the commit
     # to maintain transaction integrity
