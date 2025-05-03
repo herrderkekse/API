@@ -383,3 +383,144 @@ async def test_add_keycard_missing_fields(test_app, test_user):
         data = response.json()
         assert "detail" in data
         assert "Both key card ID and PIN must be provided" in data["detail"]
+
+####################DELETE /{uid}/keycard ENDPOINT (remove KEYCARD)####################
+@pytest.mark.asyncio
+async def test_remove_keycard(test_app, test_session_factory):
+    """Test removing key card authentication from a user"""
+    # Create a user with key card authentication
+    async with test_session_factory() as session:
+        user_with_keycard = User(
+            name="keycardremovaluser",
+            cash=100,
+            hashed_password=get_password_hash("password123"),
+            is_admin=False,
+            key_card_hash=get_password_hash("keycard456"),
+            pin_hash=get_password_hash("7890")
+        )
+        session.add(user_with_keycard)
+        await session.commit()
+        await session.refresh(user_with_keycard)
+        
+        user_id = user_with_keycard.uid
+    
+    # Login as the user
+    async with AsyncClient(app=test_app, base_url="http://test") as ac:
+        login_response = await ac.post(
+            "/auth/token",
+            data={"username": "keycardremovaluser", "password": "password123"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        
+        token = login_response.json()["access_token"]
+        
+        # Remove key card authentication
+        response = await ac.delete(
+            f"/user/{user_id}/keycard",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "message" in data
+        assert "removed successfully" in data["message"]
+        
+        # Verify key card was removed
+        async with test_session_factory() as session:
+            result = await session.execute(select(User).where(User.uid == user_id))
+            user = result.scalars().first()
+            assert user.key_card_hash is None
+            assert user.pin_hash is None
+        
+        # Verify user info shows has_keycard as false
+        user_response = await ac.get(
+            f"/user/{user_id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        assert user_response.status_code == 200
+        user_data = user_response.json()
+        assert user_data["has_keycard"] is False
+        
+        # Try to authenticate with removed key card
+        keycard_login = await ac.post(
+            "/auth/token/keycard",
+            json={"key_card_id": "keycard456", "pin": "7890"}
+        )
+        
+        assert keycard_login.status_code == 401
+
+@pytest.mark.asyncio
+async def test_remove_keycard_unauthorized(test_app, test_session_factory):
+    """Test that users cannot remove key cards from other users' accounts"""
+    # Create two users
+    async with test_session_factory() as session:
+        user_with_keycard = User(
+            name="keycarduser2",
+            cash=100,
+            hashed_password=get_password_hash("password123"),
+            is_admin=False,
+            key_card_hash=get_password_hash("keycard789"),
+            pin_hash=get_password_hash("1010")
+        )
+        
+        other_user = User(
+            name="otheruser2",
+            cash=100,
+            hashed_password=get_password_hash("otherpassword"),
+            is_admin=False
+        )
+        
+        session.add(user_with_keycard)
+        session.add(other_user)
+        await session.commit()
+        await session.refresh(user_with_keycard)
+        await session.refresh(other_user)
+        
+        keycard_user_id = user_with_keycard.uid
+    
+    # Login as other_user
+    async with AsyncClient(app=test_app, base_url="http://test") as ac:
+        login_response = await ac.post(
+            "/auth/token",
+            data={"username": "otheruser2", "password": "otherpassword"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        
+        token = login_response.json()["access_token"]
+        
+        # Try to remove key card from user_with_keycard
+        response = await ac.delete(
+            f"/user/{keycard_user_id}/keycard",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        # Should be forbidden
+        assert response.status_code == 403
+        data = response.json()
+        assert "detail" in data
+        assert "Not authorized to modify this user" in data["detail"]
+
+@pytest.mark.asyncio
+async def test_remove_nonexistent_keycard(test_app, test_user):
+    """Test removing key card when user doesn't have one"""
+    # Login as test_user (who doesn't have a key card)
+    async with AsyncClient(app=test_app, base_url="http://test") as ac:
+        login_response = await ac.post(
+            "/auth/token",
+            data={"username": "testuser", "password": "testpassword"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        
+        token = login_response.json()["access_token"]
+        
+        # Try to remove nonexistent key card
+        response = await ac.delete(
+            f"/user/{test_user.uid}/keycard",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        assert response.status_code == 400
+        data = response.json()
+        assert "detail" in data
+        assert "does not have key card authentication" in data["detail"]

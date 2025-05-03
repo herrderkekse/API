@@ -162,6 +162,43 @@ async def add_keycard(
     await db.commit()
     return user._tojson()
 
+@router.delete("/{uid}/keycard")
+async def remove_keycard(
+    uid: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Remove key card authentication from a user account"""
+    # Get the user to update
+    result = await db.execute(select(User).where(User.uid == uid))
+    user = result.scalars().first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Only allow users to update their own account unless they're an admin
+    if current_user.uid != uid and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this user"
+        )
+    
+    # Check if user has key card authentication
+    if not user.key_card_hash and not user.pin_hash:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User does not have key card authentication enabled"
+        )
+    
+    # Remove key card and PIN
+    user.key_card_hash = None
+    user.pin_hash = None
+    
+    await db.commit()
+    return {"message": "Key card authentication removed successfully"}
 
 # Helper functions
 async def _createUser(user_data: UserCreate, db: AsyncSession):

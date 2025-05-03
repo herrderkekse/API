@@ -135,6 +135,32 @@
         <button onclick="updateUser()">Update User</button>
         <div id="updateUserResponse" class="response"></div>
 
+        <!-- Add Key Card -->
+        <h3>Add Key Card</h3>
+        <div class="form-group">
+            <label>User ID:</label>
+            <input type="number" id="keycardUserId">
+        </div>
+        <div class="form-group">
+            <label>Key Card ID:</label>
+            <input type="text" id="keycardId">
+        </div>
+        <div class="form-group">
+            <label>PIN:</label>
+            <input type="password" id="keycardPin">
+        </div>
+        <button onclick="addKeycard()">Add Key Card</button>
+        <div id="addKeycardResponse" class="response"></div>
+
+        <!-- Remove Key Card -->
+        <h3>Remove Key Card</h3>
+        <div class="form-group">
+            <label>User ID:</label>
+            <input type="number" id="removeKeycardUserId">
+        </div>
+        <button onclick="removeKeycard()">Remove Key Card</button>
+        <div id="removeKeycardResponse" class="response"></div>
+
         <!-- Delete User -->
         <h3>Delete User</h3>
         <div class="form-group">
@@ -570,6 +596,77 @@
             if (timeLeftSocket) {
                 timeLeftSocket.close();
                 timeLeftSocket = null;
+            }
+        }
+
+        async function addKeycard() {
+            try {
+                const userId = document.getElementById('keycardUserId').value;
+                const keyCardId = document.getElementById('keycardId').value;
+                const pin = document.getElementById('keycardPin').value;
+
+                if (!userId || !keyCardId || !pin) {
+                    throw new Error('User ID, Key Card ID, and PIN are required');
+                }
+
+                const data = await apiCall(`/user/${userId}/keycard`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        key_card_id: keyCardId,
+                        pin: pin
+                    })
+                });
+                displayResponse('addKeycardResponse', data);
+            } catch (error) {
+                displayResponse('addKeycardResponse', { error: error.message }, true);
+            }
+        }
+
+        async function removeKeycard() {
+            try {
+                const userId = document.getElementById('removeKeycardUserId').value;
+
+                if (!userId) {
+                    throw new Error('User ID is required');
+                }
+
+                const data = await apiCall(`/user/${userId}/keycard`, {
+                    method: 'DELETE'
+                });
+                displayResponse('removeKeycardResponse', data);
+            } catch (error) {
+                displayResponse('removeKeycardResponse', { error: error.message }, true);
+            }
+        }
+
+        async function loginWithKeycard() {
+            try {
+                const keyCardId = document.getElementById('loginKeycardId').value;
+                const pin = document.getElementById('loginKeycardPin').value;
+
+                if (!keyCardId || !pin) {
+                    throw new Error('Key Card ID and PIN are required');
+                }
+
+                const data = await apiCall('/auth/token/keycard', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        key_card_id: keyCardId,
+                        pin: pin
+                    })
+                });
+
+                token = data.access_token;
+                document.getElementById('currentToken').textContent = token;
+                displayResponse('loginKeycardResponse', data);
+            } catch (error) {
+                displayResponse('loginKeycardResponse', { error: error.message }, true);
             }
         }
     </script>
