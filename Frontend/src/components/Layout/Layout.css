@@ -3,10 +3,11 @@
   --hover-color: #272832;
   --accent-color: #0071FF;
   --text-color: #c9c9c9;
+
+  --main-content-width: min(800px, 100%);
 }
 
 .admin-layout {
-  min-height: 100vh;
   min-height: 100dvh;
   background-color: var(--primary-color);
   color: var(--text-color);
@@ -18,13 +19,21 @@
   height: 100%;
 }
 
-.header {
-  display: none;
-  /* Hidden as we've moved the title to the navbar */
+.content {
+  padding: 0;
+  height: calc(100vh - 58px);
+  display: flex;
+  justify-content: center;
 }
 
-.content {
-  padding: min(5em, 7%);
+.centered-container {
+  background-color: white;
+  padding: 2rem;
+  height: 100%;
+  width: var(--main-content-width);
+  margin: 0 auto;
+  border-radius: 0 20px 0 0;
+  overflow-y: auto;
 }
 
 /* Skip link for accessibility */
@@ -56,7 +65,6 @@
   background-color: var(--primary-color);
   border-bottom: 1px solid var(--hover-color);
   height: auto;
-  /* Ensure it only takes the height it needs */
 }
 
 #navbar ul {
@@ -65,18 +73,8 @@
   padding: 0;
   margin: 0;
   align-items: center;
-  /* Center items vertically */
-}
-
-#navbar .home-li {
-  margin-right: auto;
-}
-
-#navbar .home-li h1 {
-  font-size: 1.2rem;
-  /* Reduce the size of the title */
-  margin: 0;
-  padding: 0.5em 0;
+  justify-content: space-between;
+  /* Add this to create space between items */
 }
 
 #navbar li {
@@ -84,7 +82,24 @@
   height: auto;
 }
 
+/* Remove the flex-grow property from regular items */
+#navbar li:not(:last-child) {
+  flex: 0 0 auto;
+}
+
+/* Push the last item (logout) to the right */
+#navbar li:last-child {
+  margin-left: auto;
+}
+
+/* Remove the previous flex property for last-child */
+#navbar li:last-child {
+  display: flex;
+  height: auto;
+}
+
 #navbar a {
+  flex: 1 1 0;
   display: flex;
   text-decoration: none;
   color: var(--text-color);
@@ -133,13 +148,7 @@
 }
 
 /* Mobile styles */
-@media screen and (max-width: 800px) {
-
-  #open-sidebar-button,
-  #close-sidebar-button {
-    display: block;
-  }
-
+@media screen and (max-width: 700px) {
   #navbar {
     position: fixed;
     top: 0;

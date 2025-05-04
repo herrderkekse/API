@@ -15,7 +15,7 @@ export function Layout({ children }: LayoutProps) {
   const navbarRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 800px)");
+    const media = window.matchMedia("(max-width: 700px)");
     const updateNavbar = (e: MediaQueryListEvent | MediaQueryList) => {
       setIsMobile(e.matches);
     };
@@ -103,9 +103,7 @@ export function Layout({ children }: LayoutProps) {
               </svg>
             </button>
           </li>
-          <li className="home-li">
-            <h1>Waschsalon Admin Panel</h1>
-          </li>
+
           {tabs.map(tab => (
             <li key={tab.path}>
               <a
@@ -138,7 +136,9 @@ export function Layout({ children }: LayoutProps) {
       ></div>
 
       <main id="main-content" className="content">
-        {children}
+        <div className="centered-container">
+          {children}
+        </div>
       </main>
     </div>
   );
