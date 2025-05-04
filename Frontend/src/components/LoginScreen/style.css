@@ -14,11 +14,11 @@
   --form-text-color: var(--text-color);
   --form-hover-color: var(--secondary-color);
   --form-focus-border-color: var(--text-color);
-  --icon-focus-bg-color: var(--text-color);
   --form-hint-color: var(--text-color);
   --form-border-incorrect-color: var(--error-color);
   /* form - icon */
   --icon-bg-color: var(--secondary-color);
+  --icon-focus-bg-color: var(--text-color);
   --icon-fill-color: var(--primary-color);
   --icon-color: var(--primary-color);
   --icon-bg-incorrect-color: var(--error-color);

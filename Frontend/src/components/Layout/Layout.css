@@ -7,13 +7,17 @@
   --canvas-color: var(--primary-color);
 
   /* navbar */
-  --navbar-bg-color: var(--primary-accent-color);
+  --navbar-bg-color: var(--primary-color);
   --navbar-underline-color: var(--secondary-color);
-  --navbar-item-text-color: var(--text-color);
-  --navbar-hover-color: var(--secondary-accent-color);
-  --navbar-active-underline-color: var(--secondary-color);
-  --navbar-logout-bg-color: var(--secondary-color);
   --navbar-mobile-border-color: var(--secondary-color);
+  /* navbar - items */
+  --navbar-item-text-color: var(--text-color);
+  --navbar-item-bg-color: var(--secondary-color);
+  --navbar-item-hover-color: var(--text-color);
+  --navbar-item-text-hover-color: var(--primary-color);
+  --navbar-active-item-border-color: var(--secondary-accent-color);
+  --navbar-active-item-bg-color: var(--primary-color);
+  --navbar-logout-bg-color: var(--primary-accent-color);
 }
 
 
@@ -55,13 +59,14 @@
 #navbar ul {
   list-style: none;
   display: flex;
-  padding: 0;
+  padding: .5em;
   margin: 0;
   align-items: center;
   justify-content: space-between;
 }
 
 #navbar li {
+  padding-inline: .2em;
   display: flex;
   height: auto;
 }
@@ -72,9 +77,6 @@
 
 #navbar li:last-child {
   margin-left: auto;
-}
-
-#navbar li:last-child {
   display: flex;
   height: auto;
 }
@@ -84,22 +86,28 @@
   display: flex;
   text-decoration: none;
   color: var(--navbar-item-text-color);
-  padding: 1em 2em;
+  background-color: var(--navbar-item-bg-color);
+  padding: .5em 2em;
   transition: var(--navbar-bg-color) 150ms ease;
   align-items: center;
   height: 100%;
+  border-radius: 8px;
 }
 
 #navbar a:hover {
-  background-color: var(--navbar-hover-color);
+  background-color: var(--navbar-item-hover-color);
+  color: var(--navbar-item-text-hover-color);
 }
 
 #navbar a.active-link {
-  border-bottom: 2px solid var(--navbar-active-underline-color);
+  background-color: var(--navbar-active-item-bg-color);
+  border: .15em solid var(--navbar-active-item-border-color);
+  color: var(--navbar-item-text-color);
 }
 
 #navbar a.logout-link {
   background-color: var(--navbar-logout-bg-color);
+  color: var(--navbar-item-text-color);
 }
 
 #open-sidebar-button {
