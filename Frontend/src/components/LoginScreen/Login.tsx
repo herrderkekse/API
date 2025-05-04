@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './style.css';
+import { authService } from '../../services/authService';
 
 interface LocationState {
   returnUrl?: string;
@@ -56,21 +57,7 @@ export function Login() {
     formData.append('password', password);
 
     try {
-      const response = await fetch('http://localhost:8000/auth/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Login failed');
-      }
-
-      localStorage.setItem('token', data.access_token);
+      await authService.login(username, password);
       navigate(returnUrl); // Navigate to the return URL or dashboard
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');

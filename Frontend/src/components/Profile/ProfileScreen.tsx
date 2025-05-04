@@ -2,15 +2,9 @@ import { useState, useEffect } from 'react';
 import { Button } from '../Button/Button';
 import { ProfileAttribute } from './ProfileAttribute';
 import './ProfileScreen.css';
-
-interface User {
-  uid: number;
-  name: string;
-  cash: number;
-  is_admin: boolean;
-  creation_time: string;
-  has_keycard: boolean;
-}
+import { User } from '../../models/user';
+import { userService } from '../../services/userService';
+import { authService } from '../../services/authService';
 
 export function ProfileScreen() {
   const [user, setUser] = useState<User | null>(null);
@@ -19,61 +13,22 @@ export function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
-  const API_URL = 'http://localhost:8000';
-  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    loadUserProfile();
+    setIsLoading(true);
+    userService.getCurrentUser(true).then(setUser).catch(setError);
+    setIsLoading(false);
   }, []);
 
-  const loadUserProfile = async () => {
-    setIsLoading(true);
-    try {
-      // First get the user ID from the token
-      const userResponse = await fetch(`${API_URL}/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!userResponse.ok) {
-        throw new Error('Failed to fetch user information');
-      }
-
-      const userData = await userResponse.json();
-      setUser(userData);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to load profile');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleUpdateUsername = async (newUsername: string) => {
-    if (!user) throw new Error('User not found');
-
-    setError(null);
-    setSuccess(null);
-
-    const response = await fetch(`${API_URL}/user/${user.uid}`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name: newUsername
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Failed to update username');
+    try {
+      const updatedUser = await userService.updateCurrentUsersUsername(newUsername);
+      setUser(updatedUser);
+      setSuccess('Username updated successfully');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update username');
     }
-
-    const updatedUser = await response.json();
-    setUser(updatedUser);
-    setSuccess('Profile updated successfully');
   };
 
   const handleChangePassword = () => {
@@ -82,37 +37,15 @@ export function ProfileScreen() {
 
   // Add a new function to handle keycard removal
   const handleRemoveKeycard = async () => {
-    if (!user) return;
-
-    if (!window.confirm('Are you sure you want to remove your linked key card?')) {
-      return;
-    }
-
-    setError(null);
-    setSuccess(null);
-    setIsLoading(true);
-
-    try {
-      const response = await fetch(`${API_URL}/user/${user.uid}/keycard`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to remove key card');
-      }
-
-      // Reload user profile to update the UI
-      await loadUserProfile();
+    authService.removeCurrentUsersKeycard().then(() => {
       setSuccess('Key card removed successfully');
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to remove key card');
-    } finally {
+      userService.clearUserCache();
+      setIsLoading(true);
+      userService.getCurrentUser(true).then(setUser).catch(setError);
       setIsLoading(false);
-    }
+    }).catch((error) => {
+      setError(error instanceof Error ? error.message : 'Failed to remove key card');
+    });
   };
 
   if (isLoading && !user) {

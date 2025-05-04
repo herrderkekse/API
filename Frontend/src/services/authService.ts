@@ -1,4 +1,6 @@
 import { API_BASE_URL } from '../config';
+import { userService } from './userService';
+
 
 export interface AuthResponse {
   access_token: string;
@@ -6,17 +8,8 @@ export interface AuthResponse {
   user_id: number;
 }
 
-export interface UserData {
-  uid: number;
-  name: string;
-  cash: number;
-  creation_time: string;
-  is_admin: boolean;
-  has_keycard: boolean;
-}
-
 export const authService = {
-  login: async (username: string, password: string): Promise<AuthResponse> => {
+  login: async (username: string, password: string): Promise<void> => {
     const formData = new URLSearchParams();
     formData.append('username', username);
     formData.append('password', password);
@@ -36,10 +29,12 @@ export const authService = {
     const data = await response.json();
     localStorage.setItem('token', data.access_token);
     localStorage.setItem('user_id', data.user_id.toString());
+
+    console.log(data);
     return data;
   },
 
-  loginWithKeycard: async (keyCardId: string, pin: string): Promise<AuthResponse> => {
+  loginWithKeycard: async (keyCardId: string, pin: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/auth/token/keycard`, {
       method: 'POST',
       headers: {
@@ -76,51 +71,22 @@ export const authService = {
     return localStorage.getItem('token');
   },
 
-  getUserId: (): number | null => {
-    const userId = localStorage.getItem('user_id');
-    return userId ? parseInt(userId) : null;
-  },
-
-  getCurrentUser: async (): Promise<UserData> => {
-    // Check if we have cached user data
-    const cachedData = localStorage.getItem('user_data');
-    if (cachedData) {
-      return JSON.parse(cachedData);
-    }
-
+  removeCurrentUsersKeycard: async (): Promise<void> => {
+    const userId = userService.getUserId();
     const token = authService.getToken();
-    if (!token) {
+    if (!userId || !token) {
       throw new Error('Not authenticated');
     }
-
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    const response = await fetch(`${API_BASE_URL}/user/${userId}/keycard`, {
+      method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
+        'Authorization': `Bearer ${token}`,
+      },
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch user data');
-    }
-
-    const userData = await response.json();
-    // Cache the user data
-    localStorage.setItem('user_data', JSON.stringify(userData));
-    return userData;
-  },
-
-  isAdmin: async (): Promise<boolean> => {
-    try {
-      const userData = await authService.getCurrentUser();
-      return userData.is_admin;
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      return false;
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to remove keycard');
     }
   },
-
-  // Helper method to clear cached user data (useful after profile updates)
-  clearUserCache: () => {
-    localStorage.removeItem('user_data');
-  }
 };
