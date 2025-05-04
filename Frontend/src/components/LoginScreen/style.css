@@ -1,11 +1,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-/* Login/Signup specific variables */
-.login-page {
-  --accent-color: #8672FF;
-  --base-color: white;
-  --text-color: #2E2B41;
-  --input-color: #F3F0FF;
+/* Login-specific variables that reference base variables */
+:root {
+  /* container */
+  --login-container-color: var(--primary-color);
+
+  /* headline */
+  --login-header-color: var(--text-color);
+
+  /* form */
+  --form-border-color: var(--secondary-color);
+  --form-bg-color: var(--primary-accent-color);
+  --form-text-color: var(--text-color);
+  --form-hover-color: var(--secondary-color);
+  --form-focus-border-color: var(--text-color);
+  --icon-focus-bg-color: var(--text-color);
+  --form-hint-color: var(--text-color);
+  --form-border-incorrect-color: var(--error-color);
+  /* form - icon */
+  --icon-bg-color: var(--secondary-color);
+  --icon-fill-color: var(--primary-color);
+  --icon-color: var(--primary-color);
+  --icon-bg-incorrect-color: var(--error-color);
+
+  /* submit button */
+  --submit-btn-bg-color: var(--secondary-color);
+  --submit-btn-color: var(--primary-color);
+  --submit-btn-hover-color: var(--text-color);
+  --submit-btn-focus-color: var(--text-color);
+
+  /* subtext */
+  --login-subtext-color: var(--text-color);
+  --login-subtext-link-color: var(--secondary-color);
+
+  /* error message */
+  --error-msg-text-color: var(--error-color);
+
 }
 
 /* Reset for login page */
@@ -17,7 +47,6 @@
 .login-page {
   font-family: Poppins, Segoe UI, sans-serif;
   font-size: 12pt;
-  color: var(--text-color);
   text-align: center;
   min-height: 100vh;
   background-image: url(../../assets/background.jpg);
@@ -28,7 +57,7 @@
 
 .wrapper {
   box-sizing: border-box;
-  background-color: var(--base-color);
+  background-color: var(--login-container-color);
   height: 100vh;
   width: max(40%, 600px);
   padding: 10px;
@@ -43,7 +72,7 @@
   font-size: 3rem;
   font-weight: 900;
   text-transform: uppercase;
-  color: var(--text-color);
+  color: var(--login-header-color);
 }
 
 .wrapper form {
@@ -66,9 +95,9 @@
   flex-shrink: 0;
   height: 50px;
   width: 50px;
-  background-color: var(--accent-color);
-  fill: var(--base-color);
-  color: var(--base-color);
+  background-color: var(--icon-bg-color);
+  fill: var(--icon-fill-color);
+  color: var(--icon-color);
   border-radius: 10px 0 0 10px;
   display: flex;
   justify-content: center;
@@ -85,28 +114,28 @@
   padding: 1em;
   font: inherit;
   border-radius: 0 10px 10px 0;
-  border: 2px solid var(--input-color);
+  border: 2px solid var(--form-border-color);
   border-left: none;
-  background-color: var(--input-color);
+  background-color: var(--form-bg-color);
   transition: 150ms ease;
-  color: var(--text-color);
+  color: var(--form-text-color);
 }
 
 .wrapper form input:hover {
-  border-color: var(--accent-color);
+  border-color: var(--form-hover-color);
 }
 
 .wrapper form input:focus {
   outline: none;
-  border-color: var(--text-color);
+  border-color: var(--form-focus-border-color);
 }
 
 .wrapper div:has(input:focus)>label {
-  background-color: var(--text-color);
+  background-color: var(--icon-focus-bg-color);
 }
 
 .wrapper form input::placeholder {
-  color: var(--text-color);
+  color: var(--form-hint-color);
   opacity: 0.7;
 }
 
@@ -115,8 +144,8 @@
   border: none;
   border-radius: 1000px;
   padding: .85em 4em;
-  background-color: var(--accent-color);
-  color: var(--base-color);
+  background-color: var(--submit-btn-bg-color);
+  color: var(--submit-btn-color);
   font: inherit;
   font-weight: 600;
   text-transform: uppercase;
@@ -125,21 +154,21 @@
 }
 
 .wrapper form button:hover {
-  background-color: var(--text-color);
+  background-color: var(--submit-btn-hover-color);
 }
 
 .wrapper form button:focus {
   outline: none;
-  background-color: var(--text-color);
+  background-color: var(--submit-btn-focus-color);
 }
 
 .wrapper p,
 .wrapper a {
-  color: var(--text-color);
+  color: var(--login-subtext-color);
 }
 
 .wrapper a {
-  color: var(--accent-color);
+  color: var(--login-subtext-link-color);
 }
 
 .wrapper a:hover {
@@ -154,13 +183,13 @@
 }
 
 .wrapper form div.incorrect label {
-  background-color: #f06272;
+  background-color: var(--icon-bg-incorrect-color);
 }
 
 .wrapper form div.incorrect input {
-  border-color: #f06272;
+  border-color: var(--form-border-incorrect-color);
 }
 
 .wrapper #error-message {
-  color: #f06272;
+  color: var(--error-msg-text-color);
 }

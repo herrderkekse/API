@@ -71,8 +71,6 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="admin-layout">
-      <a href="#main-content" className="skip-link">Skip to main content</a>
-
       <button
         id="open-sidebar-button"
         onClick={openSidebar}
@@ -119,7 +117,7 @@ export function Layout({ children }: LayoutProps) {
           <li>
             <a
               href="#"
-              className="accent-link"
+              className="logout-link"
               onClick={(e) => { e.preventDefault(); handleLogout(); }}
             >
               Logout
