@@ -10,7 +10,29 @@ export const userService = {
         return userId ? parseInt(userId) : null;
     },
 
-    getCurrentUser: async (reload?: boolean): Promise<User> => {
+    // Add createUser function
+    createUser: async (username: string, password: string, isAdmin: boolean = false): Promise<User> => {
+        const response = await fetch(`${API_BASE_URL}/user`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: username,
+                password: password,
+                is_admin: isAdmin
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Signup failed');
+        }
+
+        return await response.json();
+    },
+
+    getCurrentUser: async (reload: boolean = false): Promise<User> => {
         // If livereload is true, clear the cache, so we get the newest data
         if (reload) {
             localStorage.removeItem('user_data');

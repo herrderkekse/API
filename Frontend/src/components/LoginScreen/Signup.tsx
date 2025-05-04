@@ -2,6 +2,8 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './style.css';
+import { userService } from '../../services/userService';
+import { authService } from '../../services/authService';
 
 export function Signup() {
     const navigate = useNavigate();
@@ -64,25 +66,9 @@ export function Signup() {
         setIsLoading(true);
 
         try {
-            const response = await fetch('http://localhost:8000/user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: username,
-                    password: password,
-                    is_admin: false
-                }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.detail || 'Signup failed');
-            }
-
-            // Redirect to login page after successful signup
+            await userService.createUser(username, password);
+            await authService.login(username, password);
+            // Redirect to dashboard after successful signup
             navigate('/dashboard');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
