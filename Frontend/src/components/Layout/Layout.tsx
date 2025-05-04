@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Layout.css';
+import { authService } from '../../services/authService';
 
 interface LayoutProps {
   children: ReactNode;
@@ -42,7 +43,7 @@ export function Layout({ children }: LayoutProps) {
   }, [isMobile, sidebarOpen]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    authService.logout();
     navigate('/');
   };
 

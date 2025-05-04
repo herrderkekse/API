@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Login } from './components/LoginScreen/Login';
 import { Signup } from './components/LoginScreen/Signup';
 import { Layout } from './components/Layout/Layout';
@@ -8,12 +8,8 @@ import { UserManagementScreen } from './components/UserManagement/UserManagement
 import { ProfileScreen } from './components/Profile/ProfileScreen';
 import { LinkCardScreen } from './components/LinkCardScreen/LinkCardScreen';
 import './App.css';
+import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 
-
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem('token');
-  return token ? <>{children}</> : <Navigate to="/" />;
-}
 
 function App() {
   return (
@@ -25,41 +21,41 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <PrivateRoute>
+            <ProtectedRoute>
               <Layout>
                 <DeviceScreen />
               </Layout>
-            </PrivateRoute>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/users"
           element={
-            <PrivateRoute>
+            <ProtectedRoute>
               <Layout>
                 <UserManagementScreen />
               </Layout>
-            </PrivateRoute>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/statistics"
           element={
-            <PrivateRoute>
+            <ProtectedRoute>
               <Layout>
                 <StatisticsScreen />
               </Layout>
-            </PrivateRoute>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/profile"
           element={
-            <PrivateRoute>
+            <ProtectedRoute>
               <Layout>
                 <ProfileScreen />
               </Layout>
-            </PrivateRoute>
+            </ProtectedRoute>
           }
         />
       </Routes>
