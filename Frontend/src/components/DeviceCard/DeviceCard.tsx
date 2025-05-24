@@ -2,14 +2,7 @@ import { useState } from 'react';
 import { Button } from '../Button/Button';
 import { LoadingSpinner } from '../LoadingSpinner/LoadingSpinner';
 import './DeviceCard.css';
-
-interface User {
-  uid: number;
-  name: string;
-  cash: number;
-  is_admin: boolean;
-  creation_time: string;
-}
+import { User } from '../../models/user';
 
 interface Device {
   id: number;
