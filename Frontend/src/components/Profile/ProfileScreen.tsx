@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../Button/Button';
-import { ProfileAttribute } from './ProfileAttribute';
 import './ProfileScreen.css';
 import { User } from '../../models/user';
 import { userService } from '../../services/userService';
@@ -12,7 +11,8 @@ export function ProfileScreen() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [inputValue, setInputValue] = useState('');
 
   useEffect(() => {
     setIsLoading(true);
@@ -20,22 +20,28 @@ export function ProfileScreen() {
     setIsLoading(false);
   }, []);
 
+  const handleEdit = (field: string, value: string) => {
+    setEditingField(field);
+    setInputValue(value);
+  };
 
-  const handleUpdateUsername = async (newUsername: string) => {
-    try {
-      const updatedUser = await userService.updateCurrentUsersUsername(newUsername);
-      setUser(updatedUser);
-      setSuccess('Username updated successfully');
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to update username');
+  const handleCancel = () => {
+    setEditingField(null);
+  };
+
+  const handleSave = async () => {
+    if (editingField === 'username') {
+      try {
+        const updatedUser = await userService.updateCurrentUsersUsername(inputValue);
+        setUser(updatedUser);
+        setSuccess('Username updated successfully');
+        setEditingField(null);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Failed to update username');
+      }
     }
   };
 
-  const handleChangePassword = () => {
-    setShowPasswordModal(true);
-  };
-
-  // Add a new function to handle keycard removal
   const handleRemoveKeycard = async () => {
     authService.removeCurrentUsersKeycard().then(() => {
       setSuccess('Key card removed successfully');
@@ -46,6 +52,10 @@ export function ProfileScreen() {
     }).catch((error) => {
       setError(error instanceof Error ? error.message : 'Failed to remove key card');
     });
+  };
+
+  const handleChangePassword = () => {
+    setShowPasswordModal(true);
   };
 
   if (isLoading && !user) {
@@ -61,48 +71,94 @@ export function ProfileScreen() {
 
       {user && (
         <div className="profile-info">
-          <ProfileAttribute
-            label="User ID"
-            value={user.uid}
-          />
+          <table className="profile-table">
+            <tbody>
+              <tr>
+                <td className="attribute-label">User ID</td>
+                <td className="attribute-value">{user.uid}</td>
+                <td className="attribute-action"></td>
+              </tr>
 
-          <ProfileAttribute
-            label="Username"
-            value={user.name}
-            isEditable={true}
-            onUpdate={handleUpdateUsername}
-          />
+              <tr>
+                <td className="attribute-label">Username</td>
+                <td className="attribute-value">
+                  {editingField === 'username' ? (
+                    <input
+                      type="text"
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      className="attribute-input"
+                    />
+                  ) : (
+                    user.name
+                  )}
+                </td>
+                <td className="attribute-action">
+                  {editingField === 'username' ? (
+                    <div className="button-group">
+                      <Button
+                        variant="primary"
+                        size="small"
+                        onClick={handleSave}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="small"
+                        onClick={handleCancel}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={() => handleEdit('username', user.name)}
+                    >
+                      Edit
+                    </Button>
+                  )}
+                </td>
+              </tr>
 
-          <ProfileAttribute
-            label="Balance"
-            value={`€${user.cash.toFixed(2)}`}
-          />
+              <tr>
+                <td className="attribute-label">Balance</td>
+                <td className="attribute-value">{`€${user.cash.toFixed(2)}`}</td>
+                <td className="attribute-action"></td>
+              </tr>
 
-          <ProfileAttribute
-            label="Admin"
-            value={user.is_admin ? 'Yes' : 'No'}
-          />
+              <tr>
+                <td className="attribute-label">Admin</td>
+                <td className="attribute-value">{user.is_admin ? 'Yes' : 'No'}</td>
+                <td className="attribute-action"></td>
+              </tr>
 
-          <div className="profile-attribute-row">
-            <ProfileAttribute
-              label="Key Card"
-              value={user.has_keycard ? 'Linked' : 'Not Linked'}
-            />
-            {user.has_keycard && (
-              <Button
-                variant="danger"
-                onClick={handleRemoveKeycard}
-                disabled={isLoading}
-              >
-                Remove Key Card
-              </Button>
-            )}
-          </div>
+              <tr>
+                <td className="attribute-label">Key Card</td>
+                <td className="attribute-value">{user.has_keycard ? 'Linked' : 'Not Linked'}</td>
+                <td className="attribute-action">
+                  {user.has_keycard && (
+                    <Button
+                      variant="danger"
+                      size="small"
+                      onClick={handleRemoveKeycard}
+                      disabled={isLoading}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </td>
+              </tr>
 
-          <ProfileAttribute
-            label="Account Created"
-            value={new Date(user.creation_time).toLocaleString()}
-          />
+              <tr>
+                <td className="attribute-label">Account Created</td>
+                <td className="attribute-value">{new Date(user.creation_time).toLocaleString()}</td>
+                <td className="attribute-action"></td>
+              </tr>
+            </tbody>
+          </table>
 
           <div className="password-section">
             <Button

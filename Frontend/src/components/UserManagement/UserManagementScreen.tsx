@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../Button/Button';
 import { UserTable } from '../UserTable/UserTable';
 import './UserManagementScreen.css';
+import { API_BASE_URL } from '../../config';
 
 interface User {
   uid: number;
@@ -172,7 +173,6 @@ export function UserManagementScreen() {
     isAdmin: false
   });
   const [error, setError] = useState<string | null>(null);
-  const API_URL = 'http://localhost:8000';
   const token = localStorage.getItem('token');
 
   useEffect(() => {
@@ -181,7 +181,7 @@ export function UserManagementScreen() {
 
   const loadUsers = async () => {
     try {
-      const response = await fetch(`${API_URL}/user/all`, {
+      const response = await fetch(`${API_BASE_URL}/user/all`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -198,7 +198,7 @@ export function UserManagementScreen() {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${API_URL}/user`, {
+      const response = await fetch(`${API_BASE_URL}/user`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -237,7 +237,7 @@ export function UserManagementScreen() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/user/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/user/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -276,7 +276,7 @@ export function UserManagementScreen() {
         updateData.cash = editingUser.cash;
       }
 
-      const response = await fetch(`${API_URL}/user/${editingUser.uid}`, {
+      const response = await fetch(`${API_BASE_URL}/user/${editingUser.uid}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -317,7 +317,7 @@ export function UserManagementScreen() {
         onRefresh={loadUsers}
         onCreateUser={async (userData) => {
           try {
-            await fetch(`${API_URL}/user`, {
+            await fetch(`${API_BASE_URL}/user`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${token}`,

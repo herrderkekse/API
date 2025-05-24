@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import './DeviceScreen.css';
 import { DeviceCard } from '../DeviceCard/DeviceCard';
+import { API_BASE_URL } from '../../config';
 
 interface User {
   uid: number;
@@ -25,7 +26,6 @@ export function DeviceScreen() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deviceWebsockets, setDeviceWebsockets] = useState<{ [key: number]: WebSocket }>({});
-  const API_URL = 'http://localhost:8000';
   const WS_URL = 'ws://localhost:8000';
   const token = localStorage.getItem('token');
 
@@ -41,7 +41,7 @@ export function DeviceScreen() {
 
   const loadUsers = async () => {
     try {
-      const response = await fetch(`${API_URL}/user/all`, {
+      const response = await fetch(`${API_BASE_URL}/user/all`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -57,7 +57,7 @@ export function DeviceScreen() {
 
   const loadDevices = async () => {
     try {
-      const response = await fetch(`${API_URL}/device/all`, {
+      const response = await fetch(`${API_BASE_URL}/device/all`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -111,7 +111,7 @@ export function DeviceScreen() {
 
   const handleStopDevice = async (deviceId: number) => {
     try {
-      const response = await fetch(`${API_URL}/device/stop/${deviceId}`, {
+      const response = await fetch(`${API_BASE_URL}/device/stop/${deviceId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -126,7 +126,7 @@ export function DeviceScreen() {
 
   const handleStartDevice = async (deviceId: number, duration: number) => {
     try {
-      const response = await fetch(`${API_URL}/device/start/${deviceId}`, {
+      const response = await fetch(`${API_BASE_URL}/device/start/${deviceId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

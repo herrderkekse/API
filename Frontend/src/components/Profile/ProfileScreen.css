@@ -19,11 +19,6 @@
   border-bottom: 1px solid #eee;
 }
 
-.info-item:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
 
 .label {
   font-weight: 600;
@@ -125,18 +120,53 @@
   border-left: 4px solid #ffeeba;
 }
 
-.profile-attribute-row {
+.profile-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 20px 0;
+  margin: -20px -20px 0 -20px;
+  width: calc(100% + 40px);
+}
+
+.profile-table tr {
+  border-bottom: 1px solid #eee;
+}
+
+.profile-table tr:last-child {
+  border-bottom: none;
+}
+
+.profile-table td {
+  padding: 12px 0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.attribute-label {
+  font-weight: 600;
+  color: #555;
+  width: 150px;
+}
+
+.attribute-value {
+  flex: 1;
+}
+
+.attribute-action {
+  white-space: nowrap;
+  text-align: left;
+  width: 150px;
+}
+
+.attribute-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.button-group {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-}
-
-.profile-attribute-row .profile-attribute {
-  margin-bottom: 0;
-  flex-grow: 1;
-}
-
-.profile-attribute-row button {
-  margin-left: 1rem;
+  gap: 8px;
 }

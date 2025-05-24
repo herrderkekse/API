@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import './LinkCardScreen.css';
+import { API_BASE_URL } from '../../config';
 
 export function LinkCardScreen() {
   const [searchParams] = useSearchParams();
@@ -27,7 +28,7 @@ export function LinkCardScreen() {
 
   const fetchUserInfo = async (token: string) => {
     try {
-      const response = await fetch('http://localhost:8000/auth/me', {
+      const response = await fetch(API_BASE_URL + '/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -58,7 +59,7 @@ export function LinkCardScreen() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8000/user/${userId}/keycard`, {
+      const response = await fetch(API_BASE_URL + `/user/${userId}/keycard`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

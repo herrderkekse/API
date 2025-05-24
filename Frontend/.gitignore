@@ -1,3 +1,11 @@
+# config files
+config.py
+secrets.py
+config.h
+secrets.h
+config.ts
+secrets.ts
+
 # Logs
 logs
 *.log
