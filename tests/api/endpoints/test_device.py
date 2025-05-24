@@ -5,6 +5,7 @@ from sqlalchemy import text, select
 from app.main import app
 from app.models.device import Device
 from app.models.user import User
+from app.core.auth import get_password_hash
 from app.config import DEVICES
 
 
@@ -350,7 +351,8 @@ async def test_start_device_insufficient_funds(test_app, test_user, test_session
 
 ####################POST /stop ENDPOINT####################
 @pytest.mark.asyncio
-async def test_stop_device_success(test_app, test_user, test_session_factory):
+async def test_stop_device_by_admin(test_app, test_user, test_session_factory):
+    '''Test that admins can stop any device'''
     # Set up a device that's in use
     device_id = 1
     async with test_session_factory() as session:
@@ -411,17 +413,17 @@ async def test_stop_device_success(test_app, test_user, test_session_factory):
             assert updated_device.end_time is None
 
 @pytest.mark.asyncio
-async def test_stop_device_not_admin(test_app, test_user, test_session_factory):
-    # Set up a device that's in use
-    device_id = 1
+async def test_stop_device_by_owner(test_app, test_user, test_session_factory):
+    # Set up a device that's in use by the test user
+    device_id = 5
     async with test_session_factory() as session:
-        # First clear any existing devices
-        await session.execute(text("DELETE FROM device"))
+        # First clear any existing devices with this ID
+        await session.execute(text(f"DELETE FROM device WHERE id = {device_id}"))
         
-        # Create a test device that's in use
+        # Create a test device that's in use by the test user
         device = Device(
             id=device_id,
-            name="Test Device",
+            name="User Owned Device",
             type="test",
             hourly_cost=10.0,
             user_id=test_user.uid,
@@ -446,17 +448,78 @@ async def test_stop_device_not_admin(test_app, test_user, test_session_factory):
         
         token = login_response.json()["access_token"]
         
-        # Try to stop the device as non-admin
+        # Stop the device as the owner (not admin)
         response = await ac.post(
             f"/device/stop/{device_id}",
             headers={"Authorization": f"Bearer {token}"}
         )
         
-        # Should be forbidden for non-admin users
+        # Should succeed for device owner
+        assert response.status_code == 200
+        data = response.json()
+        assert "message" in data
+        assert "device" in data
+        assert data["message"] == "Device stopped successfully"
+
+@pytest.mark.asyncio
+async def test_stop_device_not_owner_not_admin(test_app, test_user, test_session_factory):
+    '''Test that non-admin users cannot stop devices they did not start'''
+    # Set up a device that's in use by another user
+    device_id = 1
+    async with test_session_factory() as session:
+        # First clear any existing devices
+        await session.execute(text("DELETE FROM device"))
+        
+        # Create another user
+        other_user = User(
+            name="otheruser",
+            cash=100.0,
+            hashed_password=get_password_hash("otherpassword"),
+            is_admin=False
+        )
+        session.add(other_user)
+        await session.commit()
+        await session.refresh(other_user)
+        
+        # Create a test device that's in use by the other user
+        device = Device(
+            id=device_id,
+            name="Test Device",
+            type="test",
+            hourly_cost=10.0,
+            user_id=other_user.uid,
+            end_time=datetime.now(timezone.utc) + timedelta(minutes=30)
+        )
+        session.add(device)
+        
+        # Ensure test user is not an admin
+        result = await session.execute(select(User).where(User.uid == test_user.uid))
+        user = result.scalars().first()
+        user.is_admin = False
+        
+        await session.commit()
+    
+    # Login to get token
+    async with AsyncClient(app=test_app, base_url="http://test") as ac:
+        login_response = await ac.post(
+            "/auth/token",
+            data={"username": "testuser", "password": "testpassword"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        
+        token = login_response.json()["access_token"]
+        
+        # Try to stop another user's device
+        response = await ac.post(
+            f"/device/stop/{device_id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        # Should be forbidden for non-owner, non-admin users
         assert response.status_code == 403
         data = response.json()
         assert "detail" in data
-        assert "Not enough permissions" in data["detail"]
+        assert "Not authorized to stop this device" in data["detail"]
 
 @pytest.mark.asyncio
 async def test_stop_device_invalid_id(test_app, test_user, test_session_factory):
@@ -605,6 +668,7 @@ async def test_stop_device_refund(test_app, test_user, test_session_factory):
         updated_user = result.scalars().first()
         expected_cash = initial_cash + refund_amount
         assert updated_user.cash == expected_cash
+
 
 
 ####################GET /{device_id} ENDPOINT####################

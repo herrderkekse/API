@@ -97,13 +97,23 @@ async def start_device(
 @router.post("/stop/{device_id}")
 async def stop_device(
     device_id: int,
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     if not 1 <= device_id <= 5:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid device ID"
+        )
+    
+    # Get device to check permissions
+    device = await _get_device_with_status_update(db, device_id)
+    
+    # Allow both admins and the user who started the device to stop it
+    if not current_user.is_admin and device.user_id != current_user.uid:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to stop this device"
         )
     
     return await _handle_device_stop(db, device_id)
