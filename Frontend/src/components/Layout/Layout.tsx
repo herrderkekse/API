@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Layout.css';
 import { authService } from '../../services/authService';
+import { userService } from '../../services/userService';
 
 interface LayoutProps {
   children: ReactNode;
@@ -13,7 +14,18 @@ export function Layout({ children }: LayoutProps) {
   const [activeTab, setActiveTab] = useState(location.pathname);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navbarRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    // Check if user is admin
+    const checkAdminStatus = async () => {
+      const adminStatus = await userService.isAdmin();
+      setIsAdmin(adminStatus);
+    };
+
+    checkAdminStatus();
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 700px)");
@@ -64,11 +76,11 @@ export function Layout({ children }: LayoutProps) {
   };
 
   const tabs = [
-    { path: '/dashboard', label: 'Devices' },
-    { path: '/users', label: 'User Management' },
-    { path: '/statistics', label: 'Statistics' },
-    { path: '/profile', label: 'Profile' }
-  ];
+    { path: '/dashboard', label: 'Devices', adminOnly: false },
+    { path: '/users', label: 'User Management', adminOnly: true },
+    { path: '/statistics', label: 'Statistics', adminOnly: true },
+    { path: '/profile', label: 'Profile', adminOnly: false }
+  ].filter(tab => !tab.adminOnly || isAdmin);
 
   return (
     <div className="admin-layout">
